@@ -1,0 +1,11 @@
+export { ContactForm } from "./contact-form";
+export { ContactoPageView } from "./contacto-page";
+export { EventosPageView } from "./eventos-page";
+export { PageCta } from "./page-cta";
+export { PageHero } from "./page-hero";
+export { PageSection } from "./page-section";
+export { PorQueElegirnosPageView } from "./por-que-elegirnos-page";
+export { QuienesSomosPageView } from "./quienes-somos-page";
+export { ServiciosPageView } from "./servicios-page";
+export { SubscribeForm } from "./subscribe-form";
+export { SuscribetePageView } from "./suscribete-page";
