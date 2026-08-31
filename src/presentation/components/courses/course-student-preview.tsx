@@ -21,6 +21,7 @@ interface CourseStudentPreviewProps {
 
 interface PreviewLesson {
   lesson: Lesson;
+  sectionId: string;
   sectionTitle: string;
   globalIndex: number;
 }
@@ -46,6 +47,7 @@ export function CourseStudentPreview({
     return course.sections.flatMap((section) =>
       section.lessons.map((lesson) => ({
         lesson,
+        sectionId: section.id,
         sectionTitle: section.title,
         globalIndex: index++,
       })),
@@ -79,6 +81,10 @@ export function CourseStudentPreview({
   }, [localProgress?.lastLessonId, mode, previewLessons]);
 
   const selected = previewLessons[selectedLessonIndex] ?? null;
+  const nextLesson = previewLessons[selectedLessonIndex + 1] ?? null;
+  const isLastLesson = selectedLessonIndex >= previewLessons.length - 1;
+  const isNewSection =
+    nextLesson !== null && nextLesson.sectionId !== selected?.sectionId;
   const totalLessons = countCourseLessons(course);
   const completedCount = localProgress?.completedLessons ?? 0;
   const progressPercent =
@@ -111,15 +117,31 @@ export function CourseStudentPreview({
     [mode, persistProgress, previewLessons],
   );
 
-  const handleCompleteLesson = useCallback(() => {
-    const lesson = selected?.lesson;
-    if (!lesson || mode !== "classroom") return;
+  const handleGoToPrevious = useCallback(() => {
+    if (selectedLessonIndex > 0) {
+      handleSelectLesson(selectedLessonIndex - 1);
+    }
+  }, [handleSelectLesson, selectedLessonIndex]);
+
+  const handleAdvance = useCallback(() => {
+    const current = previewLessons[selectedLessonIndex];
+    if (!current || mode !== "classroom") return;
+
+    const nextIndex = selectedLessonIndex + 1;
+    const next = previewLessons[nextIndex];
 
     void persistProgress({
-      lastLessonId: lesson.id,
-      lessonUpdates: [{ lessonId: lesson.id, completed: true, accessed: true }],
+      lastLessonId: next?.lesson.id ?? current.lesson.id,
+      lessonUpdates: [
+        { lessonId: current.lesson.id, completed: true, accessed: true },
+        ...(next ? [{ lessonId: next.lesson.id, accessed: true }] : []),
+      ],
+    }).then(() => {
+      if (next) {
+        setSelectedLessonIndex(nextIndex);
+      }
     });
-  }, [mode, persistProgress, selected?.lesson]);
+  }, [mode, persistProgress, previewLessons, selectedLessonIndex]);
 
   const isLessonCompleted = useCallback(
     (lessonId: string) => progressMaps.lessons.get(lessonId)?.completed ?? false,
@@ -283,21 +305,50 @@ export function CourseStudentPreview({
 
                     {mode === "classroom" && (
                       <div className="flex flex-col gap-3 border-t border-brand-line pt-4 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-sm text-brand-muted">
-                          {isLessonCompleted(selected.lesson.id)
-                            ? "Has completado esta clase."
-                            : "Cuando termines de revisar el contenido, marca la clase como completada."}
-                        </p>
                         <button
                           type="button"
-                          onClick={handleCompleteLesson}
-                          disabled={isLessonCompleted(selected.lesson.id)}
-                          className="rounded-lg bg-brand-black px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-gray disabled:cursor-default disabled:bg-emerald-600 disabled:hover:bg-emerald-600"
+                          onClick={handleGoToPrevious}
+                          disabled={selectedLessonIndex === 0}
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-brand-line px-5 py-2.5 text-sm font-medium text-brand-gray hover:bg-brand-light disabled:cursor-not-allowed disabled:opacity-40"
                         >
-                          {isLessonCompleted(selected.lesson.id)
-                            ? "Clase completada"
-                            : "Marcar clase como completada"}
+                          ← Clase anterior
                         </button>
+
+                        {isLastLesson ? (
+                          <div className="flex flex-col items-stretch gap-2 sm:items-end">
+                            {isLessonCompleted(selected.lesson.id) ? (
+                              <p className="text-sm font-medium text-emerald-700">
+                                ¡Has completado todo el curso!
+                              </p>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={handleAdvance}
+                                className="rounded-lg bg-brand-black px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-gray"
+                              >
+                                Finalizar curso
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleAdvance}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-black px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-gray"
+                          >
+                            {isNewSection ? (
+                              <>
+                                Siguiente sección
+                                <span className="font-normal text-white/80">
+                                  ({nextLesson.sectionTitle})
+                                </span>
+                              </>
+                            ) : (
+                              "Siguiente clase"
+                            )}
+                            <span aria-hidden>→</span>
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

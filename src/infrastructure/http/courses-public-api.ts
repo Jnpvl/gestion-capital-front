@@ -4,31 +4,45 @@ import type {
 } from "@/core/domain/courses/types";
 import { env } from "@/shared/config/env";
 
+const REVALIDATE_SECONDS = 60;
+
+async function publicFetch<T>(path: string, fallback: T): Promise<T> {
+  try {
+    const response = await fetch(`${env.apiUrl}${path}`, {
+      next: { revalidate: REVALIDATE_SECONDS },
+    });
+
+    if (!response.ok) {
+      return fallback;
+    }
+
+    return (await response.json()) as T;
+  } catch {
+    // Durante el build (p. ej. Vercel) el API puede no estar disponible.
+    return fallback;
+  }
+}
+
 export async function fetchPublicCourses(): Promise<CoursePublicCard[]> {
-  const response = await fetch(`${env.apiUrl}/api/courses`, {
-    next: { revalidate: 60 },
+  const data = await publicFetch<{ courses: CoursePublicCard[] }>("/api/courses", {
+    courses: [],
   });
-  if (!response.ok) return [];
-  const data = (await response.json()) as { courses: CoursePublicCard[] };
   return data.courses;
 }
 
 export async function fetchFeaturedCourses(): Promise<CoursePublicCard[]> {
-  const response = await fetch(`${env.apiUrl}/api/courses/featured`, {
-    next: { revalidate: 60 },
+  const data = await publicFetch<{ courses: CoursePublicCard[] }>("/api/courses/featured", {
+    courses: [],
   });
-  if (!response.ok) return [];
-  const data = (await response.json()) as { courses: CoursePublicCard[] };
   return data.courses;
 }
 
 export async function fetchPublicCourseBySlug(
   slug: string,
 ): Promise<CoursePublicDetail | null> {
-  const response = await fetch(`${env.apiUrl}/api/courses/${slug}`, {
-    next: { revalidate: 60 },
-  });
-  if (!response.ok) return null;
-  const data = (await response.json()) as { course: CoursePublicDetail };
-  return data.course;
+  const data = await publicFetch<{ course: CoursePublicDetail } | null>(
+    `/api/courses/${slug}`,
+    null,
+  );
+  return data?.course ?? null;
 }
