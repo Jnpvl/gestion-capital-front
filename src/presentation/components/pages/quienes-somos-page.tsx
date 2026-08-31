@@ -4,11 +4,26 @@ import { PageSection } from "@/presentation/components/pages/page-section";
 import { quienesSomosContent } from "@/shared/content";
 
 export function QuienesSomosPageView() {
-  const { hero, mission, vision, values, story } = quienesSomosContent;
+  const { hero, whoWeAre, mission, vision, values, story } = quienesSomosContent;
 
   return (
     <>
       <PageHero label={hero.label} title={hero.title} description={hero.description} />
+
+      <PageSection>
+        <div className="mx-auto max-w-3xl">
+          <h2 className="font-display text-2xl font-bold text-brand-gray sm:text-3xl">
+            {whoWeAre.title}
+          </h2>
+          <div className="mt-6 space-y-4">
+            {whoWeAre.paragraphs.map((paragraph) => (
+              <p key={paragraph.slice(0, 40)} className="text-base leading-relaxed text-brand-muted">
+                {paragraph}
+              </p>
+            ))}
+          </div>
+        </div>
+      </PageSection>
 
       <PageSection variant="light">
         <div className="grid gap-8 md:grid-cols-2">

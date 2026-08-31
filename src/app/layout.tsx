@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Lato, Plus_Jakarta_Sans } from "next/font/google";
-import { MainLayout } from "@/presentation/components/layout/main-layout";
 import { seoConfig } from "@/shared/config/seo";
 import "./globals.css";
 
@@ -39,9 +38,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" className={`${lato.variable} ${plusJakarta.variable} h-full`}>
-      <body className="flex min-h-full flex-col antialiased">
-        <MainLayout>{children}</MainLayout>
+    <html lang="es" className={`${lato.variable} ${plusJakarta.variable} h-full`} suppressHydrationWarning>
+      <body suppressHydrationWarning className="flex min-h-full flex-col antialiased">
+        {children}
       </body>
     </html>
   );

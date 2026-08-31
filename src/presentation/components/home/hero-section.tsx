@@ -2,6 +2,7 @@ import Image from "next/image";
 import { ButtonLink } from "@/presentation/components/ui/button-link";
 import { Container } from "@/presentation/components/ui/container";
 import { SectionLabel } from "@/presentation/components/ui/section-label";
+import { cn } from "@/shared/lib/cn";
 import { homeContent } from "@/shared/content";
 
 export function HeroSection() {
@@ -21,8 +22,8 @@ export function HeroSection() {
               id="hero-heading"
               className="mt-4 font-display text-4xl font-bold leading-[1.12] tracking-tight text-brand-gray sm:text-5xl"
             >
-              <span className="text-brand-gold">{hero.headline.split(" ").slice(0, 2).join(" ")}</span>{" "}
-              {hero.headline.split(" ").slice(2).join(" ")}
+              <span className="text-brand-gold">{hero.headlineHighlight}</span>{" "}
+              {hero.headlineRest}
             </h1>
 
             <p className="mt-5 max-w-xl text-base leading-relaxed text-brand-muted sm:text-lg">
@@ -38,15 +39,33 @@ export function HeroSection() {
               </ButtonLink>
             </div>
 
-            <dl className="mt-12 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-brand-line bg-brand-line sm:grid-cols-4">
-              {stats.map((stat) => (
-                <div key={stat.label} className="bg-white px-4 py-4">
+            <dl className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {stats.map((stat, index) => (
+                <div
+                  key={stat.value}
+                  className={cn(
+                    "flex flex-col justify-center rounded-xl border border-brand-line bg-white px-4 py-4 sm:px-5 sm:py-5",
+                    index < 3 ? "min-h-[5.5rem] lg:col-span-2" : "col-span-2 sm:col-span-3 lg:col-span-3",
+                  )}
+                >
                   <dt className="font-display text-xl font-bold text-brand-blue sm:text-2xl">
                     {stat.value}
                   </dt>
-                  <dd className="mt-1 text-xs leading-snug text-brand-muted sm:text-sm">
-                    {stat.label}
-                  </dd>
+                  {stat.label && (
+                    <dd className="mt-1 text-xs font-medium leading-snug text-brand-gray sm:text-sm">
+                      {stat.label}
+                    </dd>
+                  )}
+                  {stat.detail && (
+                    <dd
+                      className={cn(
+                        "text-xs leading-relaxed text-brand-muted sm:text-sm",
+                        stat.label ? "mt-1.5" : "mt-1.5",
+                      )}
+                    >
+                      {stat.detail}
+                    </dd>
+                  )}
                 </div>
               ))}
             </dl>

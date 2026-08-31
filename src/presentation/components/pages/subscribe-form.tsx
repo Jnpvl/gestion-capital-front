@@ -61,7 +61,7 @@ export function SubscribeForm() {
       </div>
       <button
         type="submit"
-        className="w-full rounded-lg bg-brand-red px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-red-light"
+        className="w-full rounded-lg bg-brand-black px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-gray"
       >
         Suscribirme
       </button>

@@ -31,7 +31,8 @@ Abre [http://localhost:3000](http://localhost:3000).
 - `src/presentation/` — Componentes UI
 - `src/shared/content/` — Contenido estático (preparado para CMS)
 - `src/shared/config/` — SEO, marca y configuración
-- `public/images/` — Assets estáticos
+- `public/images/` — Assets estáticos del sitio (logo, hero, etc.)
+- Los archivos de cursos se guardan en el backend (`gestion-capital-back/uploads/`)
 
 ## Variables de entorno
 

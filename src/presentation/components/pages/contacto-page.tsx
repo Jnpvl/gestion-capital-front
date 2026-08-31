@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { ContactForm } from "@/presentation/components/pages/contact-form";
 import { PageHero } from "@/presentation/components/pages/page-hero";
 import { PageSection } from "@/presentation/components/pages/page-section";
@@ -54,7 +55,9 @@ export function ContactoPageView() {
               <h2 className="font-display text-xl font-bold text-brand-gray">{form.title}</h2>
               <p className="mt-2 text-sm text-brand-muted">{form.description}</p>
               <div className="mt-8">
-                <ContactForm />
+                <Suspense fallback={<p className="text-sm text-brand-muted">Cargando formulario...</p>}>
+                  <ContactForm />
+                </Suspense>
               </div>
             </div>
           </div>

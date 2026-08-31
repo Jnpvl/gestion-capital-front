@@ -13,8 +13,8 @@ export const contactoContent = {
   channels: [
     {
       title: "Correo electrónico",
-      value: "la@gestionach.com",
-      href: "mailto:la@gestionach.com",
+      value: "hola@gestionach.com",
+      href: "mailto:hola@gestionach.com",
       description: "Escríbenos para cotizaciones, dudas o información general.",
     },
     {

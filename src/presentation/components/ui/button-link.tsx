@@ -11,7 +11,7 @@ interface ButtonLinkProps {
 }
 
 const variants = {
-  primary: "bg-brand-red text-white hover:bg-brand-red-light",
+  primary: "bg-brand-black text-white hover:bg-brand-gray",
   secondary: "bg-brand-blue text-white hover:bg-brand-blue-light",
   outline:
     "border border-brand-line bg-white text-brand-gray hover:border-brand-blue/40 hover:text-brand-blue",

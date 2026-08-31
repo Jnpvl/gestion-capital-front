@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { contactoContent } from "@/shared/content";
 
 export function ContactForm() {
   const { form } = contactoContent;
+  const searchParams = useSearchParams();
+  const defaultServicio = searchParams.get("servicio") ?? "";
   const [submitted, setSubmitted] = useState(false);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -79,6 +82,7 @@ export function ContactForm() {
         <select
           id="servicio"
           name="servicio"
+          defaultValue={defaultServicio}
           className="w-full rounded-lg border border-brand-line px-4 py-2.5 text-sm text-brand-gray outline-none transition-colors focus:border-brand-blue"
         >
           <option value="">Selecciona una opción</option>
@@ -103,7 +107,7 @@ export function ContactForm() {
       </div>
       <button
         type="submit"
-        className="w-full rounded-lg bg-brand-red px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-red-light sm:w-auto"
+        className="w-full rounded-lg bg-brand-black px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-gray sm:w-auto"
       >
         {form.submitLabel}
       </button>

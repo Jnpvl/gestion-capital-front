@@ -2,48 +2,61 @@ export const quienesSomosContent = {
   meta: {
     title: "¿Quiénes somos?",
     description:
-      "Conoce a Gestiona Capital Humano: consultoría en recursos humanos, capacitación y cumplimiento normativo en Guaymas, Sonora.",
+      "Conoce a Gestiona Capital Humano: consultoría en capital humano, capacitación, seguridad e higiene y cumplimiento normativo en Guaymas, Sonora.",
   },
   hero: {
     label: "Nuestra empresa",
-    title: "Expertos en capital humano con enfoque práctico",
+    title: "Expertos en Capital Humano y Cumplimiento",
     description:
-      "Somos un equipo de consultores especializados en acompañar a empresas de la región noroeste en la gestión de su talento, el cumplimiento legal y el desarrollo organizacional.",
+      "Somos consultores y formadores especializados en Capital Humano, Seguridad e Higiene, cumplimiento normativo, estándares y certificaciones. Acompañamos a organizaciones y profesionales con soluciones prácticas de consultoría y capacitación para fortalecer sus procesos, desarrollar competencias y cumplir sus objetivos.",
+  },
+  whoWeAre: {
+    title: "¿Quiénes somos?",
+    paragraphs: [
+      "Somos una consultoría especializada en Capital Humano, capacitación, Seguridad e Higiene y cumplimiento con la legislación mexicana, estándares y certificaciones.",
+      "Acompañamos a empresas, emprendedores y profesionales mediante soluciones prácticas y personalizadas que fortalecen sus procesos, desarrollan competencias y contribuyen al cumplimiento de sus objetivos.",
+      "Nuestra formación es impartida por instructores registrados ante la STPS y certificados por CONOCER, respaldando nuestros procesos de planeación, impartición y evaluación bajo criterios técnicos estandarizados.",
+      "Combinamos experiencia práctica, conocimiento técnico y cercanía para generar soluciones que aporten valor y resultados sostenibles.",
+    ],
   },
   mission: {
     title: "Misión",
     description:
-      "Impulsar el crecimiento de las organizaciones mediante asesoría, capacitación y cumplimiento normativo en capital humano, seguridad e higiene, con soluciones claras, aplicables y alineadas a la realidad de cada empresa.",
+      "Impulsar el desarrollo y la profesionalización de organizaciones y personas mediante soluciones integrales en gestión del capital humano, capacitación estratégica y cumplimiento normativo, combinando experiencia, conocimiento y acompañamiento cercano para fortalecer competencias, construir culturas organizacionales sólidas y promover la mejora continua y el desarrollo sostenible.",
   },
   vision: {
     title: "Visión",
     description:
-      "Ser el aliado estratégico de referencia en consultoría de capital humano en Sonora, reconocidos por la calidad de nuestro acompañamiento y el impacto positivo en las organizaciones que servimos.",
+      "Ser un referente en consultoría, capacitación y formación en Capital Humano, reconocido por nuestro enfoque estratégico, cumplimiento confiable y compromiso con el desarrollo de organizaciones y profesionales, aportando valor tangible a quienes buscan fortalecer sus competencias, generar estructura, impulsar el crecimiento y construir un desarrollo responsable y sostenible.",
   },
   values: [
     {
       title: "Compromiso",
-      description: "Acompañamos a nuestros clientes con responsabilidad y seguimiento continuo.",
+      description:
+        "Acompañamos a nuestros clientes con responsabilidad, atención y seguimiento en cada proceso.",
     },
     {
       title: "Excelencia",
-      description: "Buscamos la mejora constante en cada diagnóstico, capacitación y entregable.",
+      description:
+        "Buscamos la mejora continua y la calidad en cada consultoría, capacitación y solución que desarrollamos.",
     },
     {
       title: "Cercanía",
-      description: "Escuchamos, entendemos el contexto de cada empresa y adaptamos nuestras soluciones.",
+      description:
+        "Escuchamos, comprendemos las necesidades de cada persona y organización, y adaptamos nuestras soluciones a su realidad.",
     },
     {
       title: "Integridad",
-      description: "Actuamos con ética, transparencia y respeto en cada relación profesional.",
+      description:
+        "Actuamos con ética, transparencia, respeto y responsabilidad en cada relación profesional.",
     },
   ],
   story: {
     title: "Nuestra historia",
     paragraphs: [
-      "Gestiona Capital Humano nace con la convicción de que las empresas necesitan más que documentos: requieren procesos sólidos, equipos preparados y tranquilidad ante los requisitos legales y normativos.",
-      "Desde Guaymas, Sonora, hemos acompañado a organizaciones de distintos sectores —industrial, comercial, hotelero y de servicios— en la estructuración de su capital humano, la capacitación de su personal y el cumplimiento ante autoridades como la STPS.",
-      "Nuestro enfoque combina conocimiento técnico, experiencia en campo y un trato cercano que permite generar confianza y resultados medibles.",
+      "Gestiona Capital Humano nace con la convicción de que las organizaciones y las personas necesitan soluciones prácticas, acompañamiento y herramientas que generen resultados.",
+      "Desde Guaymas, Sonora, brindamos consultoría y capacitación en Capital Humano, Seguridad e Higiene y cumplimiento con la legislación mexicana, estándares y certificaciones.",
+      "Combinamos conocimiento técnico, experiencia práctica y cercanía para fortalecer competencias, mejorar procesos y generar valor.",
     ],
   },
 } as const;

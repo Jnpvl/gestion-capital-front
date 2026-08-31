@@ -42,6 +42,12 @@ export function EventosPageView() {
           <p className="mt-3 text-sm leading-relaxed text-brand-muted sm:text-base">
             {subscribe.description}
           </p>
+          <h3 className="mt-6 font-display text-lg font-bold text-brand-gray">
+            {subscribe.communityTitle}
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-brand-muted sm:text-base">
+            {subscribe.communityDescription}
+          </p>
           <div className="mt-6">
             <ButtonLink href={subscribe.ctaHref} variant="primary" size="lg">
               {subscribe.ctaLabel}

@@ -57,7 +57,10 @@ export function SiteHeader() {
             ))}
           </nav>
 
-          <div className="hidden lg:flex">
+          <div className="hidden items-center gap-3 lg:flex">
+            <ButtonLink href="/mis-cursos/login" variant="outline" size="sm">
+              Ingresar a mis cursos
+            </ButtonLink>
             <ButtonLink href="/contacto" variant="primary" size="sm">
               Contactar
             </ButtonLink>
@@ -101,7 +104,10 @@ export function SiteHeader() {
                   </Link>
                 </li>
               ))}
-              <li className="pt-2">
+              <li className="pt-2 space-y-2">
+                <ButtonLink href="/mis-cursos/login" variant="outline" className="w-full">
+                  Ingresar a mis cursos
+                </ButtonLink>
                 <ButtonLink href="/contacto" variant="primary" className="w-full">
                   Contactar
                 </ButtonLink>

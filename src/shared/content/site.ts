@@ -6,7 +6,7 @@ export interface NavItem {
 export interface SocialLink {
   label: string;
   href: string;
-  icon: "instagram" | "facebook" | "email";
+  icon: "instagram" | "linkedin" | "email";
 }
 
 export const siteConfig = {
@@ -14,7 +14,7 @@ export const siteConfig = {
   shortName: "Gestiona",
   tagline: "Consultoría en capital humano y cumplimiento empresarial",
   contact: {
-    email: "la@gestionach.com",
+    email: "hola@gestionach.com",
     location: "Guaymas, Sonora, México",
     whatsapp: {
       number: "526221792472",
@@ -29,6 +29,7 @@ export const mainNavigation: NavItem[] = [
   { label: "Inicio", href: "/" },
   { label: "Nosotros", href: "/quienes-somos" },
   { label: "Servicios", href: "/servicios" },
+  { label: "Cursos", href: "/cursos" },
   { label: "Eventos", href: "/eventos" },
   { label: "Contacto", href: "/contacto" },
 ];
@@ -37,6 +38,7 @@ export const footerNavigation: NavItem[] = [
   { label: "¿Quiénes somos?", href: "/quienes-somos" },
   { label: "¿Por qué elegirnos?", href: "/por-que-elegirnos" },
   { label: "Servicios", href: "/servicios" },
+  { label: "Cursos", href: "/cursos" },
   { label: "Eventos", href: "/eventos" },
   { label: "Contacto", href: "/contacto" },
 ];
@@ -48,13 +50,13 @@ export const socialLinks: SocialLink[] = [
     icon: "instagram",
   },
   {
-    label: "Facebook",
-    href: "https://www.facebook.com/profile.php?id=61592745845144",
-    icon: "facebook",
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/company/gestiona-capital-humano/about/?viewAsMember=true",
+    icon: "linkedin",
   },
   {
     label: "Email",
-    href: "mailto:la@gestionach.com",
+    href: "mailto:hola@gestionach.com",
     icon: "email",
   },
 ];

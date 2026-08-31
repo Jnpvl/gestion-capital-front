@@ -10,44 +10,47 @@ export const eventosContent = {
   meta: {
     title: "Eventos",
     description:
-      "Capacitaciones, talleres y eventos de Gestiona Capital Humano sobre gestión del talento y cumplimiento laboral.",
+      "Capacitaciones, talleres y eventos de Gestiona Capital Humano sobre capital humano, cumplimiento y desarrollo organizacional.",
   },
   hero: {
-    label: "Eventos y capacitaciones",
-    title: "Aprende, conecta y actualízate",
+    label: "Eventos y capacitación",
+    title: "Aprende, conecta y mantente actualizado",
     description:
-      "Participa en nuestros talleres, conferencias y programas de capacitación diseñados para líderes, responsables de RH y empresarios.",
+      "Creamos espacios de formación, actualización e intercambio de conocimientos dirigidos a profesionales, líderes, emprendedores y organizaciones que buscan fortalecer sus competencias y mantenerse al día en temas de Capital Humano, cumplimiento y desarrollo organizacional.",
   },
   upcoming: [
     {
-      title: "Factores de riesgo psicosocial (NOM-035)",
+      title: "Factores de Riesgo Psicosocial — NOM-035",
       date: "Próximamente",
       type: "Capacitación",
       description:
-        "Taller práctico sobre identificación, prevención y cumplimiento de la NOM-035 en materia de riesgos psicosociales en el centro de trabajo.",
+        "Programa práctico orientado a comprender, identificar y atender los factores de riesgo psicosocial, así como fortalecer el cumplimiento de las disposiciones aplicables de la NOM-035-STPS.",
       modality: "Presencial / Híbrido",
     },
     {
-      title: "Liderazgo y gestión de equipos",
+      title: "Liderazgo y Gestión de Equipos",
       date: "Próximamente",
       type: "Taller",
       description:
-        "Desarrolla habilidades de liderazgo efectivo, comunicación y motivación de equipos de alto rendimiento.",
-      modality: "Presencial",
+        "Desarrolla competencias para liderar equipos de manera efectiva, fortaleciendo la comunicación, la colaboración, la toma de decisiones y el desempeño.",
+      modality: "Presencial / En línea",
     },
     {
-      title: "Cumplimiento STPS para PyMEs",
+      title: "Cumplimiento Laboral y STPS",
       date: "Próximamente",
       type: "Conferencia",
       description:
-        "Sesión informativa sobre los requisitos esenciales de cumplimiento laboral para pequeñas y medianas empresas.",
+        "Conoce los principales requerimientos de la legislación laboral mexicana y las obligaciones aplicables ante la STPS, con un enfoque práctico para facilitar su comprensión e implementación.",
       modality: "En línea",
     },
   ] satisfies EventItem[],
   subscribe: {
-    title: "¿Quieres enterarte primero?",
+    title: "¿Quieres mantenerte actualizado?",
     description:
-      "Suscríbete para recibir información sobre próximos eventos, capacitaciones y recursos sobre gestión del talento.",
+      "Recibe información sobre próximos cursos, talleres, conferencias, eventos y recursos de formación.",
+    communityTitle: "Forma parte de nuestra comunidad",
+    communityDescription:
+      "Aprende, conecta y desarrolla nuevas competencias junto a otros profesionales.",
     ctaLabel: "Suscribirme",
     ctaHref: "/eventos/suscribete",
   },
@@ -57,16 +60,16 @@ export const suscribeteContent = {
   meta: {
     title: "Suscríbete",
     description:
-      "Recibe información, recursos, capacitaciones y eventos sobre gestión del talento y cumplimiento laboral.",
+      "Recibe información sobre cursos, talleres, conferencias, eventos y recursos de formación en capital humano y cumplimiento.",
   },
   hero: {
     label: "Newsletter",
     title: "Mantente informado",
     description:
-      "¿Quieres recibir información, recursos, capacitaciones y eventos sobre gestión del talento, cumplimiento laboral y desarrollo organizacional?",
+      "Recibe información sobre próximos cursos, talleres, conferencias, eventos y recursos de formación. Forma parte de nuestra comunidad y desarrolla nuevas competencias junto a otros profesionales.",
   },
   benefits: [
-    "Aviso de próximos eventos y talleres",
+    "Aviso de próximos cursos, talleres y eventos",
     "Recursos y guías sobre cumplimiento laboral",
     "Tips de gestión de capital humano",
     "Promociones exclusivas en capacitaciones",
