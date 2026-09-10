@@ -1,6 +1,26 @@
 export const AVISO_PRIVACIDAD_PATH = "/aviso-de-privacidad";
 
-export const avisoPrivacidadContent = {
+type AvisoSection = {
+  title: string;
+  paragraphs: string[];
+  bullets?: string[];
+  closing?: string;
+};
+
+export const avisoPrivacidadContent: {
+  meta: { title: string; description: string };
+  hero: { label: string; title: string; description: string };
+  lastUpdated: string;
+  gate: {
+    title: string;
+    intro: string;
+    acceptLabel: string;
+    confirmLabel: string;
+    declineLabel: string;
+    readFullLabel: string;
+  };
+  sections: AvisoSection[];
+} = {
   meta: {
     title: "Aviso de privacidad",
     description:
@@ -185,4 +205,4 @@ export const avisoPrivacidadContent = {
       ],
     },
   ],
-} as const;
+};
