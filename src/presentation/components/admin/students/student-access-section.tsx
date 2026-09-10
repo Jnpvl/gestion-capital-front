@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
-import { StudentsApiError, updateStudent } from "@/infrastructure/http/students-api";
+import {
+  StudentsApiError,
+  sendStudentAccess,
+  updateStudent,
+} from "@/infrastructure/http/students-api";
 import {
   showError,
   showInfo,
@@ -21,7 +25,9 @@ export function StudentAccessSection({ studentId, email }: StudentAccessSectionP
   const [isEditing, setIsEditing] = useState(false);
   const [password, setPassword] = useState("");
   const [savedPassword, setSavedPassword] = useState<string | null>(null);
+  const [accessEmailed, setAccessEmailed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   function startEditing() {
     setPassword(generatePassword());
@@ -42,7 +48,7 @@ export function StudentAccessSection({ studentId, email }: StudentAccessSectionP
     }
   }
 
-  async function handleSave() {
+  async function handleSave(sendEmail: boolean) {
     const token = authStorage.getToken();
     if (!token) {
       showError("Vuelve a iniciar sesión en el panel.");
@@ -58,17 +64,50 @@ export function StudentAccessSection({ studentId, email }: StudentAccessSectionP
     setIsSaving(true);
 
     try {
-      await updateStudent(token, studentId, { password: trimmedPassword });
+      await updateStudent(token, studentId, {
+        password: trimmedPassword,
+        sendAccessEmail: sendEmail,
+      });
       setSavedPassword(trimmedPassword);
+      setAccessEmailed(sendEmail);
       setPassword("");
       setIsEditing(false);
-      showSaved("Contraseña actualizada correctamente.");
+      if (sendEmail) {
+        showSaved(`Contraseña guardada y accesos enviados a ${email}.`);
+      } else {
+        showSaved("Contraseña actualizada correctamente.");
+      }
     } catch (err) {
       showError(
         err instanceof StudentsApiError ? err.message : "No se pudo actualizar la contraseña",
       );
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleResendAccess() {
+    const token = authStorage.getToken();
+    if (!token) {
+      showError("Vuelve a iniciar sesión en el panel.");
+      return;
+    }
+    if (!savedPassword) {
+      showWarning("Primero guarda una contraseña nueva para poder enviarla.");
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      await sendStudentAccess(token, studentId, savedPassword);
+      setAccessEmailed(true);
+      showSuccess(`Accesos reenviados a ${email}.`);
+    } catch (err) {
+      showError(
+        err instanceof StudentsApiError ? err.message : "No se pudo enviar el correo de accesos",
+      );
+    } finally {
+      setIsSending(false);
     }
   }
 
@@ -99,16 +138,25 @@ export function StudentAccessSection({ studentId, email }: StudentAccessSectionP
                   onGenerate={() => setPassword(generatePassword())}
                 />
                 <p className="text-xs text-brand-muted">
-                  La contraseña guardada está cifrada en el servidor y no puede recuperarse. Aquí defines una nueva.
+                  La contraseña guardada está cifrada en el servidor y no puede recuperarse. Aquí
+                  defines una nueva. Puedes guardarla sola o enviársela al alumno por correo.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => void handleSave()}
+                    onClick={() => void handleSave(true)}
                     disabled={isSaving || password.length < 6}
                     className="rounded-lg bg-brand-black px-4 py-2 text-sm font-semibold text-white hover:bg-brand-gray disabled:opacity-60"
                   >
-                    {isSaving ? "Guardando..." : "Guardar contraseña"}
+                    {isSaving ? "Guardando..." : "Guardar y enviar por correo"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleSave(false)}
+                    disabled={isSaving || password.length < 6}
+                    className="rounded-lg border border-brand-line px-4 py-2 text-sm font-medium text-brand-gray hover:bg-brand-light disabled:opacity-60"
+                  >
+                    Solo guardar
                   </button>
                   <button
                     type="button"
@@ -135,16 +183,33 @@ export function StudentAccessSection({ studentId, email }: StudentAccessSectionP
                   </div>
                 ) : (
                   <p className="rounded-lg bg-brand-light px-4 py-3 text-sm text-brand-muted">
-                    La contraseña está protegida en el servidor. Actualízala para generar una nueva y compartirla con el alumno.
+                    La contraseña está protegida en el servidor. Actualízala para generar una nueva y
+                    compartirla o enviarla al alumno.
                   </p>
                 )}
-                <button
-                  type="button"
-                  onClick={startEditing}
-                  className="rounded-lg border border-brand-line px-4 py-2 text-sm font-medium text-brand-gray hover:bg-brand-light"
-                >
-                  {savedPassword ? "Cambiar contraseña" : "Actualizar contraseña"}
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={startEditing}
+                    className="rounded-lg border border-brand-line px-4 py-2 text-sm font-medium text-brand-gray hover:bg-brand-light"
+                  >
+                    {savedPassword ? "Cambiar contraseña" : "Actualizar contraseña"}
+                  </button>
+                  {savedPassword ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleResendAccess()}
+                      disabled={isSending}
+                      className="rounded-lg bg-brand-black px-4 py-2 text-sm font-semibold text-white hover:bg-brand-gray disabled:opacity-60"
+                    >
+                      {isSending
+                        ? "Enviando..."
+                        : accessEmailed
+                          ? "Reenviar accesos por correo"
+                          : "Enviar accesos por correo"}
+                    </button>
+                  ) : null}
+                </div>
               </div>
             )}
           </dd>

@@ -87,6 +87,17 @@ export async function updateStudent(
   });
 }
 
+export async function sendStudentAccess(
+  token: string,
+  id: string,
+  password: string,
+) {
+  return request<{ student: StudentDetail; emailed: boolean }>(`/${id}/send-access`, token, {
+    method: "POST",
+    body: JSON.stringify({ password }),
+  });
+}
+
 export async function updateStudentStatus(token: string, id: string, active: boolean) {
   return request<{ student: StudentDetail }>(`/${id}/status`, token, {
     method: "PATCH",

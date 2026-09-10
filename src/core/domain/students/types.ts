@@ -149,6 +149,7 @@ export interface UpdateStudentInput {
   firstNames?: string;
   email?: string;
   password?: string;
+  sendAccessEmail?: boolean;
   phone?: string | null;
   notes?: string | null;
   alumnoType?: AlumnoType;
