@@ -45,6 +45,7 @@ export const footerNavigation: NavItem[] = [
 
 export const legalNavigation: NavItem[] = [
   { label: "Aviso de privacidad", href: "/aviso-de-privacidad" },
+  { label: "Políticas", href: "/politicas" },
 ];
 
 export const socialLinks: SocialLink[] = [

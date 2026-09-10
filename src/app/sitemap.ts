@@ -10,6 +10,7 @@ const routes = [
   "/contacto",
   "/por-que-elegirnos",
   "/aviso-de-privacidad",
+  "/politicas",
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

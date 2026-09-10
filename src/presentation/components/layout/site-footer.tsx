@@ -56,7 +56,7 @@ export function SiteFooter() {
             </div>
           </div>
 
-          <div className="grid gap-8 sm:grid-cols-2 lg:col-span-7 lg:grid-cols-2">
+          <div className="grid gap-8 sm:grid-cols-2 lg:col-span-7 lg:grid-cols-3">
             <div>
               <h3 className="text-sm font-semibold text-brand-gray">Contacto</h3>
               <address className="mt-4 space-y-3 text-sm not-italic text-brand-muted">
@@ -86,22 +86,26 @@ export function SiteFooter() {
                 ))}
               </ul>
             </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-brand-gray">Legal</h3>
+              <ul className="mt-4 space-y-2.5">
+                {legalNavigation.map((item) => (
+                  <li key={item.href}>
+                    <Link href={item.href} className="text-sm text-brand-muted transition-colors hover:text-brand-blue">
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col gap-3 border-t border-brand-line pt-8 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-12 border-t border-brand-line pt-8">
           <p className="text-center text-xs text-brand-muted sm:text-left">
             {copyright} · {name}
           </p>
-          <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-end">
-            {legalNavigation.map((item) => (
-              <li key={item.href}>
-                <Link href={item.href} className="text-xs text-brand-muted transition-colors hover:text-brand-blue">
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
         </div>
       </Container>
     </footer>

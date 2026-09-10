@@ -10,3 +10,4 @@ export { QuienesSomosPageView } from "./quienes-somos-page";
 export { ServiciosPageView } from "./servicios-page";
 export { SubscribeForm } from "./subscribe-form";
 export { SuscribetePageView } from "./suscribete-page";
+export { PoliticasPageView } from "./politicas-page";

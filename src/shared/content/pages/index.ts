@@ -4,3 +4,4 @@ export { porQueElegirnosContent } from "./por-que-elegirnos";
 export { eventosContent, suscribeteContent } from "./eventos";
 export { contactoContent } from "./contacto";
 export { AVISO_PRIVACIDAD_PATH, avisoPrivacidadContent } from "./aviso-privacidad";
+export { POLITICAS_PATH, politicasContent } from "./politicas";
