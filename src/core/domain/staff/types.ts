@@ -62,6 +62,7 @@ export interface UpdateStaffInput {
   firstNames?: string;
   email?: string;
   password?: string;
+  sendAccessEmail?: boolean;
   role?: StaffRole;
   age?: number | null;
   gender?: StaffGender | null;

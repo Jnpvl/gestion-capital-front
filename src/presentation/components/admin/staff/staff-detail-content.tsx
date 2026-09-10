@@ -10,6 +10,7 @@ import { authStorage } from "@/infrastructure/auth/auth-storage";
 import { getStaff, StaffApiError, updateStaffStatus } from "@/infrastructure/http/staff-api";
 import { confirmAction, showError, showSuccess } from "@/shared/lib/alerts";
 import { resolveAssetUrl } from "@/shared/lib/resolve-asset-url";
+import { StaffAccessSection } from "@/presentation/components/admin/staff/staff-access-section";
 import { StaffEditForm } from "@/presentation/components/admin/staff/staff-edit-form";
 import { StaffRoleBadge } from "@/presentation/components/admin/staff/staff-role-badge";
 import { StudentStatusBadge } from "@/presentation/components/admin/students/student-status-badge";
@@ -168,7 +169,9 @@ export function StaffDetailContent() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <StaffAccessSection staffId={staff.id} email={staff.email} />
+
+            <div className="grid gap-6 lg:grid-cols-3">
         <div className="rounded-2xl border border-brand-line bg-white p-6 lg:col-span-1">
           <h2 className="font-display text-lg font-bold text-brand-gray">Resumen</h2>
           <dl className="mt-4 space-y-3 text-sm">
