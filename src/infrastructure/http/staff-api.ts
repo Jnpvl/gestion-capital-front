@@ -90,4 +90,11 @@ export async function updateStaffStatus(token: string, id: string, active: boole
   });
 }
 
+export async function sendStaffAccess(token: string, id: string, password: string) {
+  return request<{ staff: StaffDetail; emailed: boolean }>(`/${id}/send-access`, token, {
+    method: "POST",
+    body: JSON.stringify({ password }),
+  });
+}
+
 export { StaffApiError };
