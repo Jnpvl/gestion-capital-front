@@ -1,6 +1,18 @@
 export const POLITICAS_PATH = "/politicas";
 
-export const politicasContent = {
+type PoliticasSection = {
+  title: string;
+  paragraphs: string[];
+  bullets?: string[];
+  closing?: string;
+};
+
+export const politicasContent: {
+  meta: { title: string; description: string };
+  hero: { label: string; title: string; description: string };
+  lastUpdated: string;
+  sections: PoliticasSection[];
+} = {
   meta: {
     title: "Políticas",
     description:
@@ -21,4 +33,4 @@ export const politicasContent = {
       ],
     },
   ],
-} as const;
+};

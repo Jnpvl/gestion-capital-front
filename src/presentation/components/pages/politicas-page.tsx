@@ -21,18 +21,23 @@ export function PoliticasPageView() {
                 </h2>
                 <div className="mt-4 space-y-3">
                   {section.paragraphs.map((paragraph) => (
-                    <p key={paragraph.slice(0, 48)} className="text-base leading-relaxed text-brand-muted">
+                    <p
+                      key={paragraph.slice(0, 48)}
+                      className="text-base leading-relaxed text-brand-muted"
+                    >
                       {paragraph}
                     </p>
                   ))}
-                  {"bullets" in section && section.bullets ? (
-                    <ul className="list-disc space-y-2 pl-5 text-base leading-relaxed text-brand-muted">
-                      {section.bullets.map((item) => (
-                        <li key={item.slice(0, 48)}>{item}</li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  {"closing" in section && section.closing ? (
+                  {"bullets" in section && Array.isArray(section.bullets)
+                    ? (
+                        <ul className="list-disc space-y-2 pl-5 text-base leading-relaxed text-brand-muted">
+                          {section.bullets.map((item: string) => (
+                            <li key={item.slice(0, 48)}>{item}</li>
+                          ))}
+                        </ul>
+                      )
+                    : null}
+                  {"closing" in section && typeof section.closing === "string" ? (
                     <p className="text-base leading-relaxed text-brand-muted">{section.closing}</p>
                   ) : null}
                 </div>
