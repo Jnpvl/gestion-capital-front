@@ -1,6 +1,13 @@
 export type CourseStatus = "draft" | "published";
 export type CourseModality = "presencial" | "online" | "hibrido";
-export type LessonBlockType = "video" | "text" | "presentation" | "quiz" | "file" | "image";
+export type LessonBlockType =
+  | "video"
+  | "text"
+  | "presentation"
+  | "quiz"
+  | "file"
+  | "image"
+  | "assignment";
 export type CourseAssetKind = "image" | "pdf";
 
 export interface CourseListItem {
@@ -55,6 +62,7 @@ export interface CourseSection {
   id: string;
   title: string;
   sortOrder: number;
+  isFinalExam?: boolean;
   lessons: Lesson[];
 }
 
@@ -72,9 +80,30 @@ export interface CourseDetail {
   status: CourseStatus;
   showInCatalog: boolean;
   featured: boolean;
+  certificateTemplateUrl?: string | null;
+  dc3TemplateUrl?: string | null;
+  instructorId?: string | null;
+  location?: string | null;
+  period?: string | null;
+  stpsThematicAreaCode?: string | null;
+  stpsThematicAreaName?: string | null;
+  instructor?: CourseInstructorSnapshot | null;
   sections: CourseSection[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CourseInstructorSnapshot {
+  id: string;
+  name: string;
+  career: string | null;
+  professionalArea: string | null;
+  aceStpsRegistration: string | null;
+  renapConocer: string | null;
+  professionalLicense: string | null;
+  photoUrl?: string | null;
+  logoUrl?: string | null;
+  signatureUrl?: string | null;
 }
 
 export function countCourseLessons(course: Pick<CourseDetail, "sections">) {
@@ -102,6 +131,7 @@ export const BLOCK_TYPE_LABELS: Record<LessonBlockType, string> = {
   quiz: "Quiz (opción múltiple)",
   file: "Archivo PDF",
   image: "Imagen",
+  assignment: "Tarea (entrega)",
 };
 
 export const DEFAULT_COVER_IMAGE = "/images/hero.jpg";

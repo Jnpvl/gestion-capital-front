@@ -1,3 +1,5 @@
+import type { AssignmentProgressItem } from "@/core/domain/courses/assignment";
+
 export interface LessonProgressItem {
   lessonId: string;
   completed: boolean;
@@ -9,6 +11,7 @@ export interface BlockProgressItem {
   blockId: string;
   answers: Record<string, number>;
   verified: boolean;
+  passed: boolean;
   score: number | null;
   totalQuestions: number | null;
   updatedAt: string;
@@ -19,8 +22,17 @@ export interface CourseProgress {
   completedLessons: number;
   totalLessons: number;
   progressPercent: number;
+  certificateNumber: string | null;
+  certificateIssuedAt: string | null;
+  dc3CertificateNumber: string | null;
+  dc3CertificateIssuedAt: string | null;
+  enrolledViaCompany: boolean;
+  deliveryMode: "online" | "presencial";
+  completedAt: string | null;
+  completed: boolean;
   lessons: LessonProgressItem[];
   blocks: BlockProgressItem[];
+  assignments: AssignmentProgressItem[];
 }
 
 export interface SaveCourseProgressInput {
@@ -34,6 +46,7 @@ export interface SaveCourseProgressInput {
     blockId: string;
     answers?: Record<string, number>;
     verified?: boolean;
+    passed?: boolean;
     score?: number;
     totalQuestions?: number;
   }>;

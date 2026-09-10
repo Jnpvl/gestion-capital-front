@@ -1,18 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { isQuizReady, parseQuizContent } from "@/core/domain/courses/quiz";
+import {
+  getQuizPassingScore,
+  isQuizReady,
+  parseQuizContent,
+} from "@/core/domain/courses/quiz";
 import type { QuizQuestion } from "@/core/domain/courses/quiz";
 import type { BlockProgressItem } from "@/core/domain/student/progress.types";
 import { cn } from "@/shared/lib/cn";
 
 interface QuizBlockStudentViewProps {
   content: string | null;
+  variant?: "practice" | "final";
   blockProgress?: BlockProgressItem;
   onProgressChange?: (update: {
     blockId: string;
     answers?: Record<string, number>;
     verified?: boolean;
+    passed?: boolean;
     score?: number;
     totalQuestions?: number;
   }) => void;
@@ -27,6 +33,7 @@ function getChoiceOptions(question: QuizQuestion) {
 
 export function QuizBlockStudentView({
   content,
+  variant = "practice",
   blockProgress,
   onProgressChange,
   blockId,
@@ -45,6 +52,9 @@ export function QuizBlockStudentView({
   const readyQuestions = quiz.questions.filter(
     (q) => q.question.trim() && getChoiceOptions(q).length >= 2,
   );
+  const passingScore = getQuizPassingScore(quiz, readyQuestions.length);
+  const isFinalExam = variant === "final";
+  const hasPassed = blockProgress?.passed ?? false;
 
   const results = useMemo(() => {
     if (!verified) return null;
@@ -63,6 +73,7 @@ export function QuizBlockStudentView({
     nextAnswers: Record<string, number>,
     nextVerified: boolean,
     nextScore?: number,
+    nextPassed?: boolean,
   ) {
     if (!onProgressChange || !blockId) return;
 
@@ -70,6 +81,7 @@ export function QuizBlockStudentView({
       blockId,
       answers: nextAnswers,
       verified: nextVerified,
+      passed: nextPassed,
       score: nextVerified ? nextScore : undefined,
       totalQuestions: nextVerified ? readyQuestions.length : undefined,
     });
@@ -81,8 +93,9 @@ export function QuizBlockStudentView({
       (total, question) => total + (answers[question.id] === question.correctIndex ? 1 : 0),
       0,
     );
+    const didPass = computedScore >= passingScore || hasPassed;
     setVerified(true);
-    persistState(answers, true, computedScore);
+    persistState(answers, true, computedScore, didPass);
   }
 
   function handleAnswerChange(questionId: string, optionIndex: number) {
@@ -94,11 +107,15 @@ export function QuizBlockStudentView({
   }
 
   function handleRetry() {
+    if (hasPassed) return;
     const nextAnswers: Record<string, number> = {};
     setAnswers(nextAnswers);
     setVerified(false);
-    persistState(nextAnswers, false);
+    persistState(nextAnswers, false, undefined, false);
   }
+
+  const didPassCurrentAttempt = verified && score >= passingScore;
+  const showPassedState = hasPassed || didPassCurrentAttempt;
 
   if (!isQuizReady(quiz)) {
     return (
@@ -110,11 +127,23 @@ export function QuizBlockStudentView({
 
   return (
     <form onSubmit={handleVerify} className="space-y-5">
-      <div className="rounded-lg border border-brand-blue/20 bg-brand-blue/5 px-4 py-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-brand-blue">Quiz de práctica</p>
+      <div
+        className={cn(
+          "rounded-lg border px-4 py-3",
+          isFinalExam ? "border-amber-200 bg-amber-50" : "border-brand-blue/20 bg-brand-blue/5",
+        )}
+      >
+        <p
+          className={cn(
+            "text-xs font-semibold uppercase tracking-wide",
+            isFinalExam ? "text-amber-900" : "text-brand-blue",
+          )}
+        >
+          {isFinalExam ? "Examen final" : "Quiz de práctica"}
+        </p>
         <p className="mt-1 text-sm text-brand-muted">
-          Responde las preguntas de opción múltiple y verifica tus resultados. No es el examen final del
-          curso.
+          Necesitas al menos el 80% ({passingScore} de {readyQuestions.length} correctas) para
+          aprobar{isFinalExam ? " el examen" : " este quiz"}.
         </p>
       </div>
 
@@ -151,7 +180,7 @@ export function QuizBlockStudentView({
                       isCorrect ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800",
                     )}
                   >
-                    {isCorrect ? "Correcta" : "Incorrecta"}
+                    {isCorrect ? "Correcta" : isFinalExam ? "Está mal" : "Incorrecta"}
                   </span>
                 )}
               </div>
@@ -161,6 +190,8 @@ export function QuizBlockStudentView({
                   const isSelected = selected === optionIndex;
                   const isCorrectOption = optionIndex === question.correctIndex;
                   const letter = String.fromCharCode(65 + choiceIndex);
+                  const revealCorrect = verified && !isFinalExam && isCorrectOption;
+                  const markWrongChoice = verified && isSelected && !isCorrectOption;
 
                   return (
                     <label
@@ -169,8 +200,9 @@ export function QuizBlockStudentView({
                         "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 text-sm transition-colors",
                         !verified && isSelected && "border-brand-blue bg-brand-blue/5",
                         !verified && !isSelected && "border-brand-line hover:bg-brand-light/60",
-                        verified && isCorrectOption && "border-emerald-400 bg-emerald-50 ring-1 ring-emerald-200",
-                        verified && isSelected && !isCorrectOption && "border-red-400 bg-red-50 ring-1 ring-red-200",
+                        revealCorrect && "border-emerald-400 bg-emerald-50 ring-1 ring-emerald-200",
+                        markWrongChoice && "border-red-400 bg-red-50 ring-1 ring-red-200",
+                        verified && isFinalExam && isSelected && isCorrect && "border-emerald-400 bg-emerald-50 ring-1 ring-emerald-200",
                         verified && "cursor-default",
                       )}
                     >
@@ -186,7 +218,7 @@ export function QuizBlockStudentView({
                       <span className="text-brand-gray">
                         <span className="mr-2 font-semibold text-brand-blue">{letter}.</span>
                         {label}
-                        {verified && isCorrectOption && (
+                        {revealCorrect && (
                           <span className="ml-2 text-xs font-medium text-emerald-700">
                             (respuesta correcta)
                           </span>
@@ -199,18 +231,24 @@ export function QuizBlockStudentView({
 
               {verified && isWrong && (
                 <div className="mt-3 rounded-lg border border-red-200 bg-white/80 px-3 py-2 text-xs text-red-800">
-                  <p>
-                    Tu respuesta:{" "}
-                    <strong>
-                      {selected !== undefined
-                        ? question.options[selected]?.trim() || "Sin respuesta"
-                        : "Sin respuesta"}
-                    </strong>
-                  </p>
-                  <p className="mt-1">
-                    La correcta era:{" "}
-                    <strong>{question.options[question.correctIndex]?.trim()}</strong>
-                  </p>
+                  {isFinalExam ? (
+                    <p>Esta respuesta está mal.</p>
+                  ) : (
+                    <>
+                      <p>
+                        Tu respuesta:{" "}
+                        <strong>
+                          {selected !== undefined
+                            ? question.options[selected]?.trim() || "Sin respuesta"
+                            : "Sin respuesta"}
+                        </strong>
+                      </p>
+                      <p className="mt-1">
+                        La correcta era:{" "}
+                        <strong>{question.options[question.correctIndex]?.trim()}</strong>
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
             </fieldset>
@@ -222,7 +260,21 @@ export function QuizBlockStudentView({
         <div className="space-y-3 rounded-xl border border-brand-line bg-brand-light/50 p-4">
           <p className="text-sm font-semibold text-brand-gray">
             Resultado: {score} de {readyQuestions.length} correctas
-            {score === readyQuestions.length ? " — ¡Excelente trabajo!" : ""}
+          </p>
+
+          <p
+            className={cn(
+              "rounded-lg px-3 py-2 text-sm font-medium",
+              showPassedState
+                ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border border-red-200 bg-red-50 text-red-800",
+            )}
+          >
+            {showPassedState
+              ? isFinalExam
+                ? "¡Aprobaste el examen final! Ya puedes finalizar el curso."
+                : "Quiz aprobado. Ya puedes continuar."
+              : `No alcanzaste el 80% (${passingScore} de ${readyQuestions.length}). Intenta de nuevo.`}
           </p>
 
           {wrongQuestions.length > 0 && (
@@ -238,21 +290,28 @@ export function QuizBlockStudentView({
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={handleRetry}
-            className="rounded-lg border border-brand-line bg-white px-4 py-2 text-sm font-medium text-brand-gray hover:bg-brand-light"
-          >
-            Intentar de nuevo
-          </button>
+          {!hasPassed && (
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="rounded-lg border border-brand-line bg-white px-4 py-2 text-sm font-medium text-brand-gray hover:bg-brand-light"
+            >
+              {isFinalExam ? "Reintentar examen" : "Intentar de nuevo"}
+            </button>
+          )}
         </div>
       ) : (
         <button
           type="submit"
           disabled={readyQuestions.some((q) => answers[q.id] === undefined)}
-          className="rounded-lg bg-brand-blue px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-blue/90 disabled:opacity-50"
+          className={cn(
+            "rounded-lg px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50",
+            isFinalExam
+              ? "bg-amber-700 hover:bg-amber-800"
+              : "bg-brand-blue hover:bg-brand-blue/90",
+          )}
         >
-          Verificar resultados
+          {isFinalExam ? "Enviar examen" : "Verificar resultados"}
         </button>
       )}
     </form>

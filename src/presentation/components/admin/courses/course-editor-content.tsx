@@ -12,12 +12,24 @@ import {
   updateCourseContent,
   updateCoursePromotion,
 } from "@/infrastructure/http/courses-api";
+import { showError, showSaved } from "@/shared/lib/alerts";
 import { CourseContentEditor } from "@/presentation/components/admin/courses/course-content-editor";
 import { CoursePromotionForm } from "@/presentation/components/admin/courses/course-promotion-form";
+import { CourseTemplatesForm } from "@/presentation/components/admin/courses/course-templates-form";
+import { CourseStudentsTab } from "@/presentation/components/admin/courses/course-students-tab";
+import { CourseAssignmentsTab } from "@/presentation/components/admin/courses/course-assignments-tab";
+import { CoursePresencialEmissionTab } from "@/presentation/components/admin/courses/course-presencial-emission-tab";
 import { CourseStudentPreview } from "@/presentation/components/courses/course-student-preview";
 import { CourseStatusBadge } from "@/presentation/components/courses/course-status-badge";
 
-type Tab = "promotion" | "content" | "preview";
+type Tab =
+  | "promotion"
+  | "templates"
+  | "content"
+  | "assignments"
+  | "students"
+  | "presencial"
+  | "preview";
 
 export function CourseEditorContent() {
   const params = useParams<{ id: string }>();
@@ -27,21 +39,23 @@ export function CourseEditorContent() {
   const [tab, setTab] = useState<Tab>("promotion");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [loadError, setLoadError] = useState("");
 
   const loadCourse = useCallback(async () => {
     const token = authStorage.getToken();
     if (!token || !courseId) return;
 
     setIsLoading(true);
-    setError("");
+    setLoadError("");
 
     try {
       const { course: data } = await getCourse(token, courseId);
       setCourse(data);
     } catch (err) {
-      setError(err instanceof CoursesApiError ? err.message : "No se pudo cargar el curso");
+      const message =
+        err instanceof CoursesApiError ? err.message : "No se pudo cargar el curso";
+      setLoadError(message);
+      showError(message);
     } finally {
       setIsLoading(false);
     }
@@ -51,20 +65,39 @@ export function CourseEditorContent() {
     void loadCourse();
   }, [loadCourse]);
 
+  async function handleSaveTemplates(data: Record<string, unknown>) {
+    const token = authStorage.getToken();
+    if (!token || !courseId) return;
+
+    setIsSaving(true);
+
+    try {
+      const { course: updated } = await updateCoursePromotion(token, courseId, data);
+      setCourse(updated);
+      showSaved("Plantillas guardadas correctamente.");
+    } catch (err) {
+      showError(
+        err instanceof CoursesApiError ? err.message : "No se pudieron guardar las plantillas",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function handleSavePromotion(data: Record<string, unknown>) {
     const token = authStorage.getToken();
     if (!token || !courseId) return;
 
     setIsSaving(true);
-    setError("");
-    setSuccess("");
 
     try {
       const { course: updated } = await updateCoursePromotion(token, courseId, data);
       setCourse(updated);
-      setSuccess("Promoción guardada correctamente.");
+      showSaved("Promoción guardada correctamente.");
     } catch (err) {
-      setError(err instanceof CoursesApiError ? err.message : "No se pudo guardar la promoción");
+      showError(
+        err instanceof CoursesApiError ? err.message : "No se pudo guardar la promoción",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -75,15 +108,15 @@ export function CourseEditorContent() {
     if (!token || !courseId) return;
 
     setIsSaving(true);
-    setError("");
-    setSuccess("");
 
     try {
       const { course: updated } = await updateCourseContent(token, courseId, sections);
       setCourse(updated);
-      setSuccess("Contenido guardado correctamente.");
+      showSaved("Contenido guardado correctamente.");
     } catch (err) {
-      setError(err instanceof CoursesApiError ? err.message : "No se pudo guardar el contenido");
+      showError(
+        err instanceof CoursesApiError ? err.message : "No se pudo guardar el contenido",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -95,8 +128,8 @@ export function CourseEditorContent() {
 
   if (!course) {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
-        {error || "Curso no encontrado."}
+      <div className="rounded-xl border border-brand-line bg-brand-light p-6 text-sm text-brand-muted">
+        {loadError || "Curso no encontrado."}
       </div>
     );
   }
@@ -133,18 +166,6 @@ export function CourseEditorContent() {
         )}
       </div>
 
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          {success}
-        </div>
-      )}
-
       <div className="flex gap-2 border-b border-brand-line">
         <button
           type="button"
@@ -159,6 +180,17 @@ export function CourseEditorContent() {
         </button>
         <button
           type="button"
+          onClick={() => setTab("templates")}
+          className={`border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+            tab === "templates"
+              ? "border-brand-blue text-brand-blue"
+              : "border-transparent text-brand-muted hover:text-brand-gray"
+          }`}
+        >
+          Plantillas
+        </button>
+        <button
+          type="button"
           onClick={() => setTab("content")}
           className={`border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
             tab === "content"
@@ -167,6 +199,39 @@ export function CourseEditorContent() {
           }`}
         >
           Contenido
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("assignments")}
+          className={`border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+            tab === "assignments"
+              ? "border-brand-blue text-brand-blue"
+              : "border-transparent text-brand-muted hover:text-brand-gray"
+          }`}
+        >
+          Tareas
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("students")}
+          className={`border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+            tab === "students"
+              ? "border-brand-blue text-brand-blue"
+              : "border-transparent text-brand-muted hover:text-brand-gray"
+          }`}
+        >
+          Alumnos
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("presencial")}
+          className={`border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
+            tab === "presencial"
+              ? "border-brand-blue text-brand-blue"
+              : "border-transparent text-brand-muted hover:text-brand-gray"
+          }`}
+        >
+          Emisión presencial
         </button>
         <button
           type="button"
@@ -189,6 +254,13 @@ export function CourseEditorContent() {
             isSaving={isSaving}
             onSave={handleSavePromotion}
           />
+        ) : tab === "templates" ? (
+          <CourseTemplatesForm
+            key={`${course.updatedAt}-templates`}
+            course={course}
+            isSaving={isSaving}
+            onSave={handleSaveTemplates}
+          />
         ) : tab === "content" ? (
           <CourseContentEditor
             key={`${course.updatedAt}-content`}
@@ -196,6 +268,15 @@ export function CourseEditorContent() {
             sections={course.sections}
             isSaving={isSaving}
             onSave={handleSaveContent}
+          />
+        ) : tab === "assignments" ? (
+          <CourseAssignmentsTab courseId={course.id} />
+        ) : tab === "students" ? (
+          <CourseStudentsTab courseId={course.id} />
+        ) : tab === "presencial" ? (
+          <CoursePresencialEmissionTab
+            courseId={course.id}
+            coursePublished={course.status === "published"}
           />
         ) : (
           <CourseStudentPreview key={`${course.updatedAt}-preview`} course={course} />

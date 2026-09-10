@@ -43,6 +43,10 @@ export const footerNavigation: NavItem[] = [
   { label: "Contacto", href: "/contacto" },
 ];
 
+export const legalNavigation: NavItem[] = [
+  { label: "Aviso de privacidad", href: "/aviso-de-privacidad" },
+];
+
 export const socialLinks: SocialLink[] = [
   {
     label: "Instagram",

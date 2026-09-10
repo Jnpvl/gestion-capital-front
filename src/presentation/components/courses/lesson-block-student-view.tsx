@@ -1,8 +1,11 @@
 import Image from "next/image";
 import type { LessonBlock } from "@/core/domain/courses/types";
 import { BLOCK_TYPE_LABELS } from "@/core/domain/courses/types";
+import type { AssignmentProgressItem } from "@/core/domain/courses/assignment";
 import type { BlockProgressItem } from "@/core/domain/student/progress.types";
+import type { CourseProgress } from "@/core/domain/student/progress.types";
 import { QuizBlockStudentView } from "@/presentation/components/courses/quiz-block-student-view";
+import { AssignmentBlockStudentView } from "@/presentation/components/courses/assignment-block-student-view";
 import { resolveAssetUrl } from "@/shared/lib/resolve-asset-url";
 
 function getVideoEmbedUrl(url: string): string | null {
@@ -25,29 +28,41 @@ function getVideoEmbedUrl(url: string): string | null {
 interface LessonBlockStudentViewProps {
   block: LessonBlock;
   index: number;
+  isFinalExam?: boolean;
+  courseSlug?: string;
   blockProgress?: BlockProgressItem;
+  assignmentProgress?: AssignmentProgressItem;
+  readOnly?: boolean;
   onBlockProgressChange?: (update: {
     blockId: string;
     answers?: Record<string, number>;
     verified?: boolean;
+    passed?: boolean;
     score?: number;
     totalQuestions?: number;
   }) => void;
+  onCourseProgressChange?: (progress: CourseProgress) => void;
 }
 
 export function LessonBlockStudentView({
   block,
   index,
+  isFinalExam = false,
+  courseSlug = "",
   blockProgress,
+  assignmentProgress,
+  readOnly = false,
   onBlockProgressChange,
+  onCourseProgressChange,
 }: LessonBlockStudentViewProps) {
   const label = BLOCK_TYPE_LABELS[block.type];
   const hasTitle = Boolean(block.title?.trim());
   const hasContent = Boolean(block.content?.trim());
   const hasResource = Boolean(block.resourceUrl?.trim());
   const hasQuiz = block.type === "quiz" && (hasContent || hasTitle);
+  const hasAssignment = block.type === "assignment";
 
-  if (!hasTitle && !hasContent && !hasResource && !hasQuiz) {
+  if (!hasTitle && !hasContent && !hasResource && !hasQuiz && !hasAssignment) {
     return (
       <div className="rounded-xl border border-dashed border-brand-line bg-brand-light/40 px-4 py-6 text-center text-sm text-brand-muted">
         Bloque {index + 1} ({label}) sin contenido
@@ -90,9 +105,20 @@ export function LessonBlockStudentView({
         {block.type === "quiz" && (
           <QuizBlockStudentView
             content={block.content}
+            variant={isFinalExam ? "final" : "practice"}
             blockId={block.id}
             blockProgress={blockProgress}
             onProgressChange={onBlockProgressChange}
+          />
+        )}
+
+        {block.type === "assignment" && (
+          <AssignmentBlockStudentView
+            block={block}
+            courseSlug={courseSlug}
+            assignment={assignmentProgress}
+            readOnly={readOnly}
+            onProgressChange={onCourseProgressChange}
           />
         )}
 

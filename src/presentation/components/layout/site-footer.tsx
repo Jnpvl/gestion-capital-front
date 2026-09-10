@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/presentation/components/ui/logo";
 import { Container } from "@/presentation/components/ui/container";
-import { footerNavigation, siteConfig, socialLinks } from "@/shared/content";
+import { footerNavigation, legalNavigation, siteConfig, socialLinks } from "@/shared/content";
 
 function SocialIcon({ icon }: { icon: "instagram" | "linkedin" | "email" }) {
   if (icon === "instagram") {
@@ -89,10 +89,19 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-12 border-t border-brand-line pt-8">
+        <div className="mt-12 flex flex-col gap-3 border-t border-brand-line pt-8 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-center text-xs text-brand-muted sm:text-left">
             {copyright} · {name}
           </p>
+          <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-end">
+            {legalNavigation.map((item) => (
+              <li key={item.href}>
+                <Link href={item.href} className="text-xs text-brand-muted transition-colors hover:text-brand-blue">
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       </Container>
     </footer>

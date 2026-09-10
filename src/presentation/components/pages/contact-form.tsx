@@ -1,30 +1,48 @@
 "use client";
 
-import { useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useState } from "react";
+import Link from "next/link";
+import { ContactApiError, sendContactMessage } from "@/infrastructure/http/contact-api";
 import { contactoContent } from "@/shared/content";
+import { showError, showSuccess } from "@/shared/lib/alerts";
 
 export function ContactForm() {
   const { form } = contactoContent;
   const searchParams = useSearchParams();
   const defaultServicio = searchParams.get("servicio") ?? "";
-  const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSubmitted(true);
-  }
+    const formEl = e.currentTarget;
+    const data = new FormData(formEl);
 
-  if (submitted) {
-    return (
-      <div className="rounded-xl border border-brand-line bg-brand-light p-8 text-center">
-        <p className="text-brand-gray">{form.successMessage}</p>
-      </div>
-    );
+    setIsSubmitting(true);
+    try {
+      await sendContactMessage({
+        nombre: String(data.get("nombre") ?? "").trim(),
+        empresa: String(data.get("empresa") ?? "").trim(),
+        email: String(data.get("email") ?? "").trim(),
+        telefono: String(data.get("telefono") ?? "").trim(),
+        servicio: String(data.get("servicio") ?? "").trim(),
+        mensaje: String(data.get("mensaje") ?? "").trim(),
+      });
+      showSuccess(form.successMessage, "Mensaje enviado");
+      formEl.reset();
+    } catch (error) {
+      showError(
+        error instanceof ContactApiError
+          ? error.message
+          : "No se pudo enviar el mensaje. Inténtalo de nuevo.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={(e) => void handleSubmit(e)} className="space-y-5">
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
           <label htmlFor="nombre" className="mb-1.5 block text-sm font-medium text-brand-gray">
@@ -107,10 +125,18 @@ export function ContactForm() {
       </div>
       <button
         type="submit"
-        className="w-full rounded-lg bg-brand-black px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-gray sm:w-auto"
+        disabled={isSubmitting}
+        className="w-full rounded-lg bg-brand-black px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-gray disabled:opacity-50 sm:w-auto"
       >
-        {form.submitLabel}
+        {isSubmitting ? "Enviando..." : form.submitLabel}
       </button>
+      <p className="text-xs leading-relaxed text-brand-muted">
+        Al enviar este formulario aceptas nuestro{" "}
+        <Link href="/aviso-de-privacidad" className="font-medium text-brand-blue hover:underline">
+          aviso de privacidad
+        </Link>
+        .
+      </p>
     </form>
   );
 }

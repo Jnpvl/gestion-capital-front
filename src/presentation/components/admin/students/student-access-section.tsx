@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
 import { StudentsApiError, updateStudent } from "@/infrastructure/http/students-api";
+import {
+  showError,
+  showInfo,
+  showSaved,
+  showSuccess,
+  showWarning,
+} from "@/shared/lib/alerts";
 import { generatePassword, PasswordField } from "@/presentation/components/ui/password-field";
 
 interface StudentAccessSectionProps {
@@ -14,47 +21,40 @@ export function StudentAccessSection({ studentId, email }: StudentAccessSectionP
   const [isEditing, setIsEditing] = useState(false);
   const [password, setPassword] = useState("");
   const [savedPassword, setSavedPassword] = useState<string | null>(null);
-  const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   function startEditing() {
     setPassword(generatePassword());
-    setError("");
-    setCopied(false);
     setIsEditing(true);
   }
 
   function cancelEditing() {
     setPassword("");
-    setError("");
     setIsEditing(false);
   }
 
   async function copyPassword(value: string) {
     try {
       await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      showSuccess("Contraseña copiada al portapapeles");
     } catch {
-      setError("No se pudo copiar al portapapeles. Copia la contraseña manualmente.");
+      showWarning("Copia la contraseña manualmente.");
     }
   }
 
   async function handleSave() {
     const token = authStorage.getToken();
     if (!token) {
-      setError("Tu sesión de administrador expiró. Vuelve a iniciar sesión en el panel.");
+      showError("Vuelve a iniciar sesión en el panel.");
       return;
     }
 
     const trimmedPassword = password.trim();
     if (trimmedPassword.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres.");
+      showWarning("La contraseña debe tener al menos 6 caracteres.");
       return;
     }
 
-    setError("");
     setIsSaving(true);
 
     try {
@@ -62,8 +62,11 @@ export function StudentAccessSection({ studentId, email }: StudentAccessSectionP
       setSavedPassword(trimmedPassword);
       setPassword("");
       setIsEditing(false);
+      showSaved("Contraseña actualizada correctamente.");
     } catch (err) {
-      setError(err instanceof StudentsApiError ? err.message : "No se pudo actualizar la contraseña");
+      showError(
+        err instanceof StudentsApiError ? err.message : "No se pudo actualizar la contraseña",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -121,17 +124,13 @@ export function StudentAccessSection({ studentId, email }: StudentAccessSectionP
               <div className="space-y-3">
                 {savedPassword ? (
                   <div className="space-y-2">
-                    <PasswordField
-                      value={savedPassword}
-                      onChange={() => {}}
-                      readOnly
-                    />
+                    <PasswordField value={savedPassword} onChange={() => {}} readOnly />
                     <button
                       type="button"
                       onClick={() => void copyPassword(savedPassword)}
                       className="text-sm font-medium text-brand-blue hover:underline"
                     >
-                      {copied ? "Copiada al portapapeles" : "Copiar contraseña"}
+                      Copiar contraseña
                     </button>
                   </div>
                 ) : (
@@ -152,16 +151,19 @@ export function StudentAccessSection({ studentId, email }: StudentAccessSectionP
         </div>
       </dl>
 
-      {error && (
-        <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </p>
-      )}
-
       {savedPassword && !isEditing && (
-        <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          Contraseña guardada. Usa exactamente <strong>{savedPassword}</strong> en &quot;Ingresar a mis cursos&quot; con el correo <strong>{email}</strong>.
-        </p>
+        <button
+          type="button"
+          onClick={() =>
+            showInfo(
+              `Usa el correo ${email} y la contraseña que acabas de guardar en "Ingresar a mis cursos".`,
+              "Credenciales del alumno",
+            )
+          }
+          className="mt-4 text-sm font-medium text-brand-blue hover:underline"
+        >
+          Ver recordatorio de acceso
+        </button>
       )}
     </div>
   );

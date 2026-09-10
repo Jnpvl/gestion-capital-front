@@ -34,8 +34,7 @@ export const contactoContent = {
     description:
       "Completa el formulario y nos pondremos en contacto contigo. Los campos marcados con * son obligatorios.",
     submitLabel: "Enviar mensaje",
-    successMessage:
-      "Gracias por tu mensaje. Te contactaremos pronto. (Formulario de demostración — se conectará al panel administrativo.)",
+    successMessage: "Gracias por tu mensaje. Te contactaremos pronto.",
   },
   schedule: {
     title: "Horario de atención",

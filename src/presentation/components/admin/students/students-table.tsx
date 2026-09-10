@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { StudentListItem } from "@/core/domain/students/types";
+import { AlumnoTypeBadge } from "@/presentation/components/admin/students/alumno-type-badge";
 import { StudentStatusBadge } from "@/presentation/components/admin/students/student-status-badge";
 import { Tooltip } from "@/presentation/components/ui/tooltip";
 import { cn } from "@/shared/lib/cn";
@@ -66,15 +67,15 @@ function StudentRowActions({
   onToggleStatus: (student: StudentListItem) => void;
 }) {
   const toggleLabel = student.active
-    ? "Desactivar acceso del estudiante"
-    : "Activar acceso del estudiante";
+    ? "Desactivar acceso del alumno"
+    : "Activar acceso del alumno";
 
   return (
     <div className="inline-flex items-center gap-2">
-      <Tooltip label="Ver detalle del estudiante">
+      <Tooltip label="Ver detalle del alumno">
         <Link
-          href={`/admin/estudiantes/${student.id}`}
-          aria-label="Ver detalle del estudiante"
+          href={`/admin/alumnos/${student.id}`}
+          aria-label="Ver detalle del alumno"
           className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-brand-line text-brand-blue transition-colors hover:bg-brand-blue/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue"
         >
           <ViewIcon />
@@ -95,7 +96,7 @@ export function StudentsTable({ students, isLoading, onToggleStatus }: StudentsT
   if (isLoading) {
     return (
       <div className="px-6 py-12 text-center text-sm text-brand-muted">
-        Cargando estudiantes...
+        Cargando alumnos...
       </div>
     );
   }
@@ -103,7 +104,7 @@ export function StudentsTable({ students, isLoading, onToggleStatus }: StudentsT
   if (students.length === 0) {
     return (
       <div className="px-6 py-12 text-center text-sm text-brand-muted">
-        No hay estudiantes registrados.
+        No hay alumnos registrados.
       </div>
     );
   }
@@ -115,7 +116,13 @@ export function StudentsTable({ students, isLoading, onToggleStatus }: StudentsT
           <thead>
             <tr className="border-b border-brand-line bg-brand-light/60">
               <th className="px-6 py-3.5 text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                Estudiante
+                Alumno
+              </th>
+              <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                Tipo
+              </th>
+              <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                Empresa
               </th>
               <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-brand-muted">
                 Teléfono
@@ -136,7 +143,7 @@ export function StudentsTable({ students, isLoading, onToggleStatus }: StudentsT
               <tr key={student.id} className="transition-colors hover:bg-brand-light/50">
                 <td className="px-6 py-4 align-middle">
                   <Link
-                    href={`/admin/estudiantes/${student.id}`}
+                    href={`/admin/alumnos/${student.id}`}
                     className="block font-medium text-brand-gray hover:text-brand-blue"
                   >
                     {student.name}
@@ -144,6 +151,12 @@ export function StudentsTable({ students, isLoading, onToggleStatus }: StudentsT
                   <span className="mt-0.5 block truncate text-xs text-brand-muted">
                     {student.email}
                   </span>
+                </td>
+                <td className="px-4 py-4 align-middle">
+                  <AlumnoTypeBadge type={student.alumnoType} />
+                </td>
+                <td className="px-4 py-4 align-middle text-brand-muted">
+                  {student.companyName ?? "—"}
                 </td>
                 <td className="px-4 py-4 align-middle whitespace-nowrap text-brand-muted">
                   {student.phone ?? "—"}
@@ -171,12 +184,15 @@ export function StudentsTable({ students, isLoading, onToggleStatus }: StudentsT
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <Link
-                  href={`/admin/estudiantes/${student.id}`}
+                  href={`/admin/alumnos/${student.id}`}
                   className="font-medium text-brand-gray hover:text-brand-blue"
                 >
                   {student.name}
                 </Link>
                 <p className="mt-0.5 truncate text-xs text-brand-muted">{student.email}</p>
+                <div className="mt-2">
+                  <AlumnoTypeBadge type={student.alumnoType} />
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <StudentStatusBadge active={student.active} />
@@ -185,6 +201,10 @@ export function StudentsTable({ students, isLoading, onToggleStatus }: StudentsT
             </div>
 
             <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <dt className="text-brand-muted">Empresa</dt>
+                <dd className="font-medium text-brand-gray">{student.companyName ?? "—"}</dd>
+              </div>
               <div>
                 <dt className="text-brand-muted">Teléfono</dt>
                 <dd className="font-medium text-brand-gray">{student.phone ?? "—"}</dd>

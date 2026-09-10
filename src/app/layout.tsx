@@ -38,7 +38,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" className={`${lato.variable} ${plusJakarta.variable} h-full`} suppressHydrationWarning>
+    <html
+      lang="es"
+      className={`${lato.variable} ${plusJakarta.variable} h-full`}
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
       <body suppressHydrationWarning className="flex min-h-full flex-col antialiased">
         {children}
       </body>

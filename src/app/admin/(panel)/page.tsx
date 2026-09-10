@@ -1,10 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import { AdminPageHeader } from "@/presentation/components/admin/admin-page-header";
-import { adminNavigation } from "@/shared/config/admin-nav";
-
-const quickLinks = adminNavigation.flatMap((section) => section.items).filter((item) => item.href !== "/admin");
+import { useAuth } from "@/presentation/providers/auth-provider";
+import { getAdminNavigation } from "@/shared/config/admin-nav";
 
 export default function AdminDashboardPage() {
+  const { user } = useAuth();
+  const quickLinks = getAdminNavigation(user?.role ?? "teacher")
+    .flatMap((section) => section.items)
+    .filter((item) => item.href !== "/admin");
+
   return (
     <>
       <AdminPageHeader

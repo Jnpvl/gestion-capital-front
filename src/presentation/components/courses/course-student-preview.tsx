@@ -3,12 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import type { CourseDetail, Lesson } from "@/core/domain/courses/types";
+import { findFinalExamInfo } from "@/core/domain/courses/final-exam";
 import { countCourseLessons, DEFAULT_COVER_IMAGE } from "@/core/domain/courses/types";
+import { parseAssignmentContent } from "@/core/domain/courses/assignment";
 import type {
   CourseProgress,
   SaveCourseProgressInput,
 } from "@/core/domain/student/progress.types";
 import { LessonBlockStudentView } from "@/presentation/components/courses/lesson-block-student-view";
+import { downloadCourseCertificate, downloadCourseDc3 } from "@/infrastructure/http/student-certificate-api";
+import { showError, showSuccess } from "@/shared/lib/alerts";
 import { cn } from "@/shared/lib/cn";
 import { resolveAssetUrl } from "@/shared/lib/resolve-asset-url";
 
@@ -23,6 +27,7 @@ interface PreviewLesson {
   lesson: Lesson;
   sectionId: string;
   sectionTitle: string;
+  isFinalExam: boolean;
   globalIndex: number;
 }
 
@@ -33,7 +38,54 @@ function buildProgressMaps(progress: CourseProgress | null | undefined) {
   const blocks = new Map(
     (progress?.blocks ?? []).map((item) => [item.blockId, item] as const),
   );
-  return { lessons, blocks };
+  const assignments = new Map(
+    (progress?.assignments ?? []).map((item) => [item.blockId, item] as const),
+  );
+  return { lessons, blocks, assignments };
+}
+
+function lessonRequiredAssignmentsApproved(
+  lesson: Lesson,
+  assignments: Map<string, { status: string }>,
+): boolean {
+  const requiredBlocks = lesson.blocks.filter(
+    (block) =>
+      block.type === "assignment" && parseAssignmentContent(block.content).required,
+  );
+  return requiredBlocks.every(
+    (block) => assignments.get(block.id)?.status === "approved",
+  );
+}
+
+function allRequiredAssignmentsApproved(
+  course: CourseDetail,
+  assignments: Map<string, { status: string }>,
+): boolean {
+  return course.sections.every((section) =>
+    section.lessons.every((lesson) =>
+      lessonRequiredAssignmentsApproved(lesson, assignments),
+    ),
+  );
+}
+
+function lessonQuizzesPassed(
+  lesson: Lesson,
+  _isFinalExam: boolean,
+  blocks: Map<string, { passed: boolean }>,
+): boolean {
+  const quizzes = lesson.blocks.filter((block) => block.type === "quiz");
+  if (quizzes.length === 0) return true;
+  return quizzes.every((block) => blocks.get(block.id)?.passed);
+}
+
+function allPracticeQuizzesPassed(
+  course: CourseDetail,
+  blocks: Map<string, { passed: boolean }>,
+): boolean {
+  return course.sections.every((section) => {
+    if (section.isFinalExam) return true;
+    return section.lessons.every((lesson) => lessonQuizzesPassed(lesson, false, blocks));
+  });
 }
 
 export function CourseStudentPreview({
@@ -42,6 +94,10 @@ export function CourseStudentPreview({
   progress = null,
   onSaveProgress,
 }: CourseStudentPreviewProps) {
+  const [isDownloadingCertificate, setIsDownloadingCertificate] = useState(false);
+  const [isDownloadingDc3, setIsDownloadingDc3] = useState(false);
+  const finalExamInfo = useMemo(() => findFinalExamInfo(course), [course]);
+
   const previewLessons = useMemo<PreviewLesson[]>(() => {
     let index = 0;
     return course.sections.flatMap((section) =>
@@ -49,6 +105,7 @@ export function CourseStudentPreview({
         lesson,
         sectionId: section.id,
         sectionTitle: section.title,
+        isFinalExam: Boolean(section.isFinalExam),
         globalIndex: index++,
       })),
     );
@@ -64,22 +121,6 @@ export function CourseStudentPreview({
 
   const progressMaps = useMemo(() => buildProgressMaps(localProgress), [localProgress]);
 
-  useEffect(() => {
-    if (mode !== "classroom" || hasRestoredLesson.current || previewLessons.length === 0) {
-      return;
-    }
-
-    const lastLessonId = localProgress?.lastLessonId;
-    if (lastLessonId) {
-      const index = previewLessons.findIndex((item) => item.lesson.id === lastLessonId);
-      if (index >= 0) {
-        setSelectedLessonIndex(index);
-      }
-    }
-
-    hasRestoredLesson.current = true;
-  }, [localProgress?.lastLessonId, mode, previewLessons]);
-
   const selected = previewLessons[selectedLessonIndex] ?? null;
   const nextLesson = previewLessons[selectedLessonIndex + 1] ?? null;
   const isLastLesson = selectedLessonIndex >= previewLessons.length - 1;
@@ -90,6 +131,60 @@ export function CourseStudentPreview({
   const progressPercent =
     localProgress?.progressPercent ??
     (totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0);
+
+  const finalExamPassed = finalExamInfo
+    ? progressMaps.blocks.get(finalExamInfo.blockId)?.passed ?? false
+    : true;
+  const hasCertificateTemplate = true;
+  const hasDc3Template = true;
+  const enrolledViaCompany = localProgress?.enrolledViaCompany ?? false;
+  const courseCompleted = totalLessons > 0 && completedCount >= totalLessons;
+  const assignmentsApproved = allRequiredAssignmentsApproved(course, progressMaps.assignments);
+  const canDownloadCertificate =
+    mode === "classroom" &&
+    hasCertificateTemplate &&
+    finalExamPassed &&
+    courseCompleted &&
+    assignmentsApproved;
+  const canDownloadDc3 =
+    mode === "classroom" &&
+    enrolledViaCompany &&
+    hasDc3Template &&
+    finalExamPassed &&
+    courseCompleted &&
+    assignmentsApproved;
+  const isCurrentFinalExamLesson = Boolean(selected?.isFinalExam);
+  const currentAssignmentsApproved = selected
+    ? lessonRequiredAssignmentsApproved(selected.lesson, progressMaps.assignments)
+    : true;
+  const currentQuizzesPassed = selected
+    ? lessonQuizzesPassed(selected.lesson, isCurrentFinalExamLesson, progressMaps.blocks)
+    : true;
+  const practiceQuizzesPassed = allPracticeQuizzesPassed(course, progressMaps.blocks);
+  const canAccessFinalExam = practiceQuizzesPassed && assignmentsApproved;
+  const nextIsFinalExam = Boolean(nextLesson?.isFinalExam);
+  const canAdvanceFromCurrentLesson =
+    currentQuizzesPassed &&
+    currentAssignmentsApproved &&
+    (!isCurrentFinalExamLesson || finalExamPassed) &&
+    (!nextIsFinalExam || canAccessFinalExam);
+
+  useEffect(() => {
+    if (mode !== "classroom" || hasRestoredLesson.current || previewLessons.length === 0) {
+      return;
+    }
+
+    const lastLessonId = localProgress?.lastLessonId;
+    if (lastLessonId) {
+      const index = previewLessons.findIndex((item) => item.lesson.id === lastLessonId);
+      const lastPreview = index >= 0 ? previewLessons[index] : null;
+      if (lastPreview && !(lastPreview.isFinalExam && !canAccessFinalExam)) {
+        setSelectedLessonIndex(index);
+      }
+    }
+
+    hasRestoredLesson.current = true;
+  }, [canAccessFinalExam, localProgress?.lastLessonId, mode, previewLessons]);
 
   const persistProgress = useCallback(
     async (input: SaveCourseProgressInput) => {
@@ -105,16 +200,29 @@ export function CourseStudentPreview({
 
   const handleSelectLesson = useCallback(
     (index: number) => {
+      const preview = previewLessons[index];
+      if (!preview) return;
+
+      if (
+        mode === "classroom" &&
+        preview.isFinalExam &&
+        !canAccessFinalExam
+      ) {
+        showError(
+          "Para presentar el examen debes aprobar los quizzes con 80% y tener las tareas obligatorias aprobadas.",
+        );
+        return;
+      }
+
       setSelectedLessonIndex(index);
-      const lesson = previewLessons[index]?.lesson;
-      if (!lesson || mode !== "classroom") return;
+      if (mode !== "classroom") return;
 
       void persistProgress({
-        lastLessonId: lesson.id,
-        lessonUpdates: [{ lessonId: lesson.id, accessed: true }],
+        lastLessonId: preview.lesson.id,
+        lessonUpdates: [{ lessonId: preview.lesson.id, accessed: true }],
       });
     },
-    [mode, persistProgress, previewLessons],
+    [canAccessFinalExam, mode, persistProgress, previewLessons],
   );
 
   const handleGoToPrevious = useCallback(() => {
@@ -148,6 +256,32 @@ export function CourseStudentPreview({
     [progressMaps.lessons],
   );
 
+  const handleDownloadCertificate = useCallback(async () => {
+    setIsDownloadingCertificate(true);
+    try {
+      await downloadCourseCertificate(course.slug);
+      showSuccess("Constancia descargada");
+    } catch (error) {
+      showError(
+        error instanceof Error ? error.message : "No se pudo descargar la constancia",
+      );
+    } finally {
+      setIsDownloadingCertificate(false);
+    }
+  }, [course.slug]);
+
+  const handleDownloadDc3 = useCallback(async () => {
+    setIsDownloadingDc3(true);
+    try {
+      await downloadCourseDc3(course.slug);
+      showSuccess("DC3 descargado");
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "No se pudo descargar el DC3");
+    } finally {
+      setIsDownloadingDc3(false);
+    }
+  }, [course.slug]);
+
   return (
     <div className="space-y-4">
       {mode === "preview" && (
@@ -179,6 +313,30 @@ export function CourseStudentPreview({
           <p className="mt-2 text-xs text-brand-muted">
             {completedCount} de {totalLessons} clases completadas
           </p>
+          {(canDownloadCertificate || canDownloadDc3) && (
+            <div className="mt-4 space-y-2">
+              {canDownloadCertificate && (
+                <button
+                  type="button"
+                  disabled={isDownloadingCertificate}
+                  onClick={() => void handleDownloadCertificate()}
+                  className="block w-full rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                >
+                  {isDownloadingCertificate ? "Generando constancia..." : "Descargar constancia"}
+                </button>
+              )}
+              {canDownloadDc3 && (
+                <button
+                  type="button"
+                  disabled={isDownloadingDc3}
+                  onClick={() => void handleDownloadDc3()}
+                  className="block w-full rounded-lg border border-blue-300 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-900 hover:bg-blue-100 disabled:opacity-50"
+                >
+                  {isDownloadingDc3 ? "Generando DC-3..." : "Descargar DC-3"}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -208,6 +366,11 @@ export function CourseStudentPreview({
                       <li key={section.id}>
                         <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-brand-blue">
                           {section.title}
+                          {section.isFinalExam && (
+                            <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                              Examen final
+                            </span>
+                          )}
                         </p>
                         <ul className="space-y-1">
                           {section.lessons.map((lesson) => {
@@ -216,6 +379,10 @@ export function CourseStudentPreview({
                             );
                             const isActive = previewIndex === selectedLessonIndex;
                             const isCompleted = isLessonCompleted(lesson.id);
+                            const examLocked =
+                              mode === "classroom" &&
+                              Boolean(section.isFinalExam) &&
+                              !canAccessFinalExam;
 
                             return (
                               <li key={lesson.id}>
@@ -226,7 +393,9 @@ export function CourseStudentPreview({
                                     "flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
                                     isActive
                                       ? "bg-white font-semibold text-brand-blue shadow-sm ring-1 ring-brand-line"
-                                      : "text-brand-gray hover:bg-white/80",
+                                      : examLocked
+                                        ? "text-brand-muted"
+                                        : "text-brand-gray hover:bg-white/80",
                                   )}
                                 >
                                   <span
@@ -288,7 +457,16 @@ export function CourseStudentPreview({
                           key={block.id}
                           block={block}
                           index={blockIndex}
+                          isFinalExam={selected.isFinalExam}
+                          courseSlug={course.slug}
                           blockProgress={progressMaps.blocks.get(block.id)}
+                          assignmentProgress={progressMaps.assignments.get(block.id)}
+                          readOnly={mode !== "classroom"}
+                          onCourseProgressChange={
+                            mode === "classroom"
+                              ? (next) => setLocalProgress(next)
+                              : undefined
+                          }
                           onBlockProgressChange={
                             mode === "classroom" && onSaveProgress
                               ? (update) => {
@@ -317,24 +495,69 @@ export function CourseStudentPreview({
                         {isLastLesson ? (
                           <div className="flex flex-col items-stretch gap-2 sm:items-end">
                             {isLessonCompleted(selected.lesson.id) ? (
-                              <p className="text-sm font-medium text-emerald-700">
-                                ¡Has completado todo el curso!
-                              </p>
+                              <div className="w-full max-w-sm space-y-2 sm:ml-auto">
+                                <p className="text-sm font-medium text-emerald-700 sm:text-right">
+                                  ¡Has completado todo el curso!
+                                </p>
+                                {canDownloadCertificate && (
+                                  <button
+                                    type="button"
+                                    disabled={isDownloadingCertificate}
+                                    onClick={() => void handleDownloadCertificate()}
+                                    className="block w-full rounded-lg border border-amber-300 bg-amber-50 px-5 py-2.5 text-sm font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                                  >
+                                    {isDownloadingCertificate
+                                      ? "Generando constancia..."
+                                      : "Descargar constancia"}
+                                  </button>
+                                )}
+                                {canDownloadDc3 && (
+                                  <button
+                                    type="button"
+                                    disabled={isDownloadingDc3}
+                                    onClick={() => void handleDownloadDc3()}
+                                    className="block w-full rounded-lg border border-blue-300 bg-blue-50 px-5 py-2.5 text-sm font-semibold text-blue-900 hover:bg-blue-100 disabled:opacity-50"
+                                  >
+                                    {isDownloadingDc3 ? "Generando DC-3..." : "Descargar DC-3"}
+                                  </button>
+                                )}
+                              </div>
                             ) : (
                               <button
                                 type="button"
                                 onClick={handleAdvance}
-                                className="rounded-lg bg-brand-black px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-gray"
+                                disabled={!canAdvanceFromCurrentLesson}
+                                className="rounded-lg bg-brand-black px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-gray disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 Finalizar curso
                               </button>
+                            )}
+                            {!canAdvanceFromCurrentLesson && isCurrentFinalExamLesson && (
+                              <p className="text-xs text-amber-800">
+                                Aprueba el examen final (80%) para poder finalizar el curso.
+                              </p>
+                            )}
+                            {!canAdvanceFromCurrentLesson &&
+                              !isCurrentFinalExamLesson &&
+                              !currentQuizzesPassed && (
+                              <p className="text-xs text-amber-800">
+                                Aprueba el quiz con al menos 80% para continuar.
+                              </p>
+                            )}
+                            {!canAdvanceFromCurrentLesson &&
+                              !isCurrentFinalExamLesson &&
+                              !currentAssignmentsApproved && (
+                              <p className="text-xs text-amber-800">
+                                La tarea obligatoria debe estar aprobada para continuar.
+                              </p>
                             )}
                           </div>
                         ) : (
                           <button
                             type="button"
                             onClick={handleAdvance}
-                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-black px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-gray"
+                            disabled={!canAdvanceFromCurrentLesson}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-black px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-gray disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {isNewSection ? (
                               <>
@@ -348,6 +571,32 @@ export function CourseStudentPreview({
                             )}
                             <span aria-hidden>→</span>
                           </button>
+                        )}
+                        {!isLastLesson && nextIsFinalExam && !canAccessFinalExam && (
+                          <p className="text-xs text-amber-800 sm:text-right">
+                            Para el examen: quizzes al 80% y tareas obligatorias aprobadas.
+                          </p>
+                        )}
+                        {!isLastLesson && !canAdvanceFromCurrentLesson && isCurrentFinalExamLesson && (
+                          <p className="text-xs text-amber-800 sm:text-right">
+                            Aprueba el examen final (80%) para continuar.
+                          </p>
+                        )}
+                        {!isLastLesson &&
+                          !canAdvanceFromCurrentLesson &&
+                          !isCurrentFinalExamLesson &&
+                          !currentQuizzesPassed && (
+                          <p className="text-xs text-amber-800 sm:text-right">
+                            Aprueba el quiz con al menos 80% para continuar.
+                          </p>
+                        )}
+                        {!isLastLesson &&
+                          !canAdvanceFromCurrentLesson &&
+                          !isCurrentFinalExamLesson &&
+                          !currentAssignmentsApproved && (
+                          <p className="text-xs text-amber-800 sm:text-right">
+                            La tarea obligatoria debe estar aprobada para continuar.
+                          </p>
                         )}
                       </div>
                     )}

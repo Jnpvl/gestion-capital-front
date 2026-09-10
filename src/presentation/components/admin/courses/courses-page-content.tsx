@@ -9,6 +9,7 @@ import {
   CoursesApiError,
   listCourses,
 } from "@/infrastructure/http/courses-api";
+import { showError } from "@/shared/lib/alerts";
 import { AdminPageHeader } from "@/presentation/components/admin/admin-page-header";
 import { AdminPagination } from "@/presentation/components/admin/admin-pagination";
 import { CoursesTable } from "@/presentation/components/admin/courses/courses-table";
@@ -26,7 +27,6 @@ export function CoursesPageContent() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -36,7 +36,6 @@ export function CoursesPageContent() {
     if (!token) return;
 
     setIsLoading(true);
-    setError("");
 
     try {
       const result = await listCourses(token, {
@@ -49,7 +48,7 @@ export function CoursesPageContent() {
       setTotal(result.total);
       setTotalPages(result.totalPages);
     } catch (err) {
-      setError(err instanceof CoursesApiError ? err.message : "Error al cargar cursos");
+      showError(err instanceof CoursesApiError ? err.message : "Error al cargar cursos");
     } finally {
       setIsLoading(false);
     }
@@ -76,13 +75,12 @@ export function CoursesPageContent() {
     if (!token) return;
 
     setIsCreating(true);
-    setError("");
 
     try {
       const { course } = await createCourse(token, title);
       router.push(`/admin/cursos/${course.id}`);
     } catch (err) {
-      setError(err instanceof CoursesApiError ? err.message : "No se pudo crear el curso");
+      showError(err instanceof CoursesApiError ? err.message : "No se pudo crear el curso");
       setIsCreating(false);
     }
   }
@@ -174,10 +172,6 @@ export function CoursesPageContent() {
             ))}
           </div>
         </div>
-
-        {error && (
-          <div className="border-b border-brand-line px-6 py-3 text-sm text-red-600">{error}</div>
-        )}
 
         <CoursesTable courses={courses} isLoading={isLoading} />
 

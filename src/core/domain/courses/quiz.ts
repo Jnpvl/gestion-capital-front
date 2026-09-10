@@ -8,6 +8,7 @@ export interface QuizQuestion {
 export interface QuizContent {
   instructions: string;
   questions: QuizQuestion[];
+  passingScore?: number;
 }
 
 export function createEmptyQuiz(): QuizContent {
@@ -34,6 +35,10 @@ export function parseQuizContent(raw: string | null | undefined): QuizContent {
 
     return {
       instructions: typeof parsed.instructions === "string" ? parsed.instructions : "",
+      passingScore:
+        typeof parsed.passingScore === "number" && parsed.passingScore > 0
+          ? parsed.passingScore
+          : undefined,
       questions: parsed.questions
         .filter((q) => q && typeof q.question === "string")
         .map((q) => ({
@@ -65,4 +70,20 @@ export function isQuizReady(quiz: QuizContent): boolean {
     const correctOption = q.options[q.correctIndex]?.trim();
     return Boolean(correctOption);
   });
+}
+
+export function countReadyQuizQuestions(quiz: QuizContent): number {
+  return quiz.questions.filter((q) => {
+    const validOptions = q.options
+      .map((option) => option.trim())
+      .filter(Boolean);
+    return q.question.trim() && validOptions.length >= 2;
+  }).length;
+}
+
+export const QUIZ_PASSING_PERCENT = 80;
+
+export function getQuizPassingScore(_quiz: QuizContent, readyQuestionCount: number): number {
+  if (!readyQuestionCount) return 1;
+  return Math.max(1, Math.ceil((readyQuestionCount * QUIZ_PASSING_PERCENT) / 100));
 }

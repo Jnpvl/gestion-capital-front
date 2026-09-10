@@ -8,9 +8,15 @@ import type {
   LessonBlockType,
 } from "@/core/domain/courses/types";
 import { BLOCK_TYPE_LABELS } from "@/core/domain/courses/types";
-import { createEmptyQuiz, serializeQuizContent } from "@/core/domain/courses/quiz";
+import { createEmptyQuiz, createQuizQuestion, serializeQuizContent } from "@/core/domain/courses/quiz";
+import {
+  createEmptyAssignmentContent,
+  serializeAssignmentContent,
+} from "@/core/domain/courses/assignment";
 import { QuizBlockEditor } from "@/presentation/components/admin/courses/quiz-block-editor";
+import { AssignmentBlockEditor } from "@/presentation/components/admin/courses/assignment-block-editor";
 import { CourseAssetUpload } from "@/presentation/components/admin/courses/course-asset-upload";
+import { cn } from "@/shared/lib/cn";
 
 interface CourseContentEditorProps {
   courseId: string;
@@ -24,7 +30,12 @@ function newBlock(type: LessonBlockType = "text"): LessonBlock {
     id: crypto.randomUUID(),
     type,
     title: "",
-    content: type === "quiz" ? serializeQuizContent(createEmptyQuiz()) : "",
+    content:
+      type === "quiz"
+        ? serializeQuizContent(createEmptyQuiz())
+        : type === "assignment"
+          ? serializeAssignmentContent(createEmptyAssignmentContent())
+          : "",
     resourceUrl: "",
     sortOrder: 0,
   };
@@ -44,7 +55,38 @@ function newSection(): CourseSection {
     id: crypto.randomUUID(),
     title: "Nueva sección",
     sortOrder: 0,
+    isFinalExam: false,
     lessons: [],
+  };
+}
+
+function newFinalExamSection(): CourseSection {
+  return {
+    id: crypto.randomUUID(),
+    title: "Examen final",
+    sortOrder: 0,
+    isFinalExam: true,
+    lessons: [
+      {
+        id: crypto.randomUUID(),
+        title: "Examen final",
+        sortOrder: 0,
+        blocks: [
+          {
+            id: crypto.randomUUID(),
+            type: "quiz",
+            title: "Examen final",
+            content: serializeQuizContent({
+              instructions:
+                "Responde todas las preguntas del examen final. Debes obtener al menos 80% para aprobar.",
+              questions: [createQuizQuestion()],
+            }),
+            resourceUrl: "",
+            sortOrder: 0,
+          },
+        ],
+      },
+    ],
   };
 }
 
@@ -130,11 +172,15 @@ function LessonEditor({
                 onChange={(e) => {
                   const type = e.target.value as LessonBlockType;
                   const switchingToQuiz = type === "quiz" && block.type !== "quiz";
+                  const switchingToAssignment =
+                    type === "assignment" && block.type !== "assignment";
                   updateBlock(blockIndex, {
                     type,
                     content: switchingToQuiz
                       ? serializeQuizContent(createEmptyQuiz())
-                      : block.content,
+                      : switchingToAssignment
+                        ? serializeAssignmentContent(createEmptyAssignmentContent())
+                        : block.content,
                   });
                 }}
                 className="rounded-lg border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-blue"
@@ -204,6 +250,16 @@ function LessonEditor({
                 content={block.content}
                 onChange={(content) => updateBlock(blockIndex, { content })}
               />
+            ) : block.type === "assignment" ? (
+              <AssignmentBlockEditor
+                courseId={courseId}
+                content={block.content}
+                resourceUrl={block.resourceUrl}
+                onChangeContent={(content) => updateBlock(blockIndex, { content })}
+                onChangeResourceUrl={(path) =>
+                  updateBlock(blockIndex, { resourceUrl: path })
+                }
+              />
             ) : block.type === "text" ? (
               <textarea
                 value={block.content ?? ""}
@@ -242,6 +298,68 @@ export function CourseContentEditor({
   const [sections, setSections] = useState<CourseSection[]>(
     initialSections.length > 0 ? initialSections : [],
   );
+  const [collapsedSectionIds, setCollapsedSectionIds] = useState<Set<string>>(() => new Set());
+
+  const hasFinalExam = sections.some((section) => section.isFinalExam);
+
+  function focusSection(sectionId: string) {
+    setCollapsedSectionIds((prev) => {
+      const next = new Set(prev);
+      for (const item of sections) next.add(item.id);
+      next.delete(sectionId);
+      return next;
+    });
+  }
+
+  function isSectionCollapsed(sectionId: string) {
+    return collapsedSectionIds.has(sectionId);
+  }
+
+  function toggleSectionCollapsed(sectionId: string) {
+    setCollapsedSectionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) next.delete(sectionId);
+      else next.add(sectionId);
+      return next;
+    });
+  }
+
+  function expandAllSections() {
+    setCollapsedSectionIds(new Set());
+  }
+
+  function collapseAllSections() {
+    setCollapsedSectionIds(new Set(sections.map((section) => section.id)));
+  }
+
+  function updateFinalExamQuiz(sectionIndex: number, content: string) {
+    setSections((prev) =>
+      prev.map((section, index) => {
+        if (index !== sectionIndex || !section.isFinalExam) return section;
+
+        const lesson = section.lessons[0] ?? {
+          id: crypto.randomUUID(),
+          title: "Examen final",
+          sortOrder: 0,
+          blocks: [],
+        };
+        const block = lesson.blocks[0] ?? {
+          ...newBlock("quiz"),
+          title: "Examen final",
+        };
+
+        return {
+          ...section,
+          lessons: [
+            {
+              ...lesson,
+              blocks: [{ ...block, type: "quiz", content }],
+            },
+          ],
+        };
+      }),
+    );
+  }
 
   function updateSection(sectionIndex: number, patch: Partial<CourseSection>) {
     setSections((prev) =>
@@ -305,26 +423,90 @@ export function CourseContentEditor({
 
   return (
     <div className="space-y-6">
+      {sections.length > 0 && (
+        <div className="flex flex-wrap justify-end gap-2 rounded-xl border border-brand-line bg-brand-light/40 p-4">
+          <button
+            type="button"
+            onClick={expandAllSections}
+            className="rounded-lg border border-brand-line bg-white px-4 py-2 text-sm font-medium text-brand-gray hover:bg-brand-light"
+          >
+            Expandir todas
+          </button>
+          <button
+            type="button"
+            onClick={collapseAllSections}
+            className="rounded-lg border border-brand-line bg-white px-4 py-2 text-sm font-medium text-brand-gray hover:bg-brand-light"
+          >
+            Colapsar todas
+          </button>
+        </div>
+      )}
+
       {sections.length === 0 && (
         <div className="rounded-xl border border-dashed border-brand-line bg-brand-light/40 p-8 text-center text-sm text-brand-muted">
           Aún no hay secciones. Agrega la primera para organizar el contenido del curso.
         </div>
       )}
 
-      {sections.map((section, sectionIndex) => (
-        <div key={section.id} className="rounded-2xl border border-brand-line bg-white p-5">
-          <div className="flex flex-col gap-3 border-b border-brand-line pb-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex-1">
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-brand-blue">
-                Sección {sectionIndex + 1}
-              </label>
-              <input
-                value={section.title}
-                onChange={(e) => updateSection(sectionIndex, { title: e.target.value })}
-                className="w-full rounded-lg border border-brand-line px-4 py-2.5 text-sm font-semibold outline-none focus:border-brand-blue"
-              />
+      {sections.map((section, sectionIndex) => {
+        const isCollapsed = isSectionCollapsed(section.id);
+        const isFinalExam = Boolean(section.isFinalExam);
+
+        return (
+        <div
+          key={section.id}
+          className={cn(
+            "rounded-2xl border p-5",
+            isFinalExam ? "border-amber-200 bg-amber-50/40" : "border-brand-line bg-white",
+          )}
+        >
+          <div className="flex flex-col gap-3 border-b border-brand-line pb-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 flex-1 gap-3">
+              <button
+                type="button"
+                onClick={() => toggleSectionCollapsed(section.id)}
+                className="mt-7 shrink-0 rounded-lg border border-brand-line p-2 text-brand-muted hover:bg-brand-light hover:text-brand-gray"
+                aria-label={isCollapsed ? "Expandir sección" : "Colapsar sección"}
+                aria-expanded={!isCollapsed}
+              >
+                <svg
+                  className={cn("h-4 w-4 transition-transform", isCollapsed && "-rotate-90")}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
+              </button>
+              <div className="min-w-0 flex-1">
+                <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                  {isFinalExam ? (
+                    <span className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+                      Examen final
+                    </span>
+                  ) : (
+                    <label className="text-xs font-semibold uppercase tracking-wide text-brand-blue">
+                      Sección {sectionIndex + 1}
+                    </label>
+                  )}
+                  {isCollapsed && !isFinalExam && (
+                    <span className="text-xs text-brand-muted">
+                      {section.lessons.length}{" "}
+                      {section.lessons.length === 1 ? "clase" : "clases"}
+                    </span>
+                  )}
+                </div>
+                <input
+                  value={section.title}
+                  onChange={(e) => updateSection(sectionIndex, { title: e.target.value })}
+                  className="w-full rounded-lg border border-brand-line px-4 py-2.5 text-sm font-semibold outline-none focus:border-brand-blue"
+                />
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 sm:pt-6">
+              {!isFinalExam && (
+                <>
               <button
                 type="button"
                 onClick={() => moveSection(sectionIndex, -1)}
@@ -341,16 +523,30 @@ export function CourseContentEditor({
               >
                 Bajar
               </button>
+                </>
+              )}
               <button
                 type="button"
                 onClick={() => removeSection(sectionIndex)}
                 className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50"
               >
-                Eliminar sección
+                {isFinalExam ? "Eliminar examen" : "Eliminar sección"}
               </button>
             </div>
           </div>
 
+          {!isCollapsed && (
+            <>
+          {isFinalExam ? (
+            <div className="mt-4">
+              <QuizBlockEditor
+                variant="final"
+                content={section.lessons[0]?.blocks[0]?.content ?? null}
+                onChange={(content) => updateFinalExamQuiz(sectionIndex, content)}
+              />
+            </div>
+          ) : (
+            <>
           <div className="mt-4 space-y-4">
             {section.lessons.length === 0 ? (
               <p className="rounded-xl border border-dashed border-brand-line bg-brand-light/40 px-4 py-6 text-center text-sm text-brand-muted">
@@ -381,17 +577,41 @@ export function CourseContentEditor({
           >
             Agregar clase a esta sección
           </button>
+            </>
+          )}
+            </>
+          )}
         </div>
-      ))}
+        );
+      })}
 
       <div className="flex flex-col gap-3 border-t border-brand-line pt-6 sm:flex-row sm:items-center sm:justify-between">
-        <button
-          type="button"
-          onClick={() => setSections((prev) => [...prev, newSection()])}
-          className="rounded-lg border border-brand-line px-4 py-2.5 text-sm font-medium text-brand-gray hover:bg-brand-light"
-        >
-          Agregar sección
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const section = newSection();
+              setSections((prev) => [...prev, section]);
+              focusSection(section.id);
+            }}
+            className="rounded-lg border border-brand-line px-4 py-2.5 text-sm font-medium text-brand-gray hover:bg-brand-light"
+          >
+            Agregar sección
+          </button>
+          <button
+            type="button"
+            disabled={hasFinalExam}
+            title={hasFinalExam ? "Este curso ya tiene un examen final" : undefined}
+            onClick={() => {
+              const section = newFinalExamSection();
+              setSections((prev) => [...prev, section]);
+              focusSection(section.id);
+            }}
+            className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-900 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Agregar examen final
+          </button>
+        </div>
 
         <button
           type="button"

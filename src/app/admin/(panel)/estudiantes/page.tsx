@@ -1,5 +1,5 @@
-import { StudentsPageContent } from "@/presentation/components/admin/students/students-page-content";
+import { redirect } from "next/navigation";
 
-export default function AdminEstudiantesPage() {
-  return <StudentsPageContent />;
+export default function AdminEstudiantesRedirectPage() {
+  redirect("/admin/alumnos");
 }

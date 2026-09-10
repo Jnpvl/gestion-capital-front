@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showError } from "@/shared/lib/alerts";
 import { ApiClientError, useAuth } from "@/presentation/providers/auth-provider";
 
 export function AdminLoginForm() {
@@ -9,12 +10,10 @@ export function AdminLoginForm() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError("");
     setIsSubmitting(true);
 
     try {
@@ -22,9 +21,9 @@ export function AdminLoginForm() {
       router.replace("/admin");
     } catch (err) {
       if (err instanceof ApiClientError) {
-        setError(err.message);
+        showError(err.message, "No se pudo iniciar sesión");
       } else {
-        setError("No se pudo iniciar sesión. Intenta de nuevo.");
+        showError("Intenta de nuevo.", "No se pudo iniciar sesión");
       }
     } finally {
       setIsSubmitting(false);
@@ -33,12 +32,6 @@ export function AdminLoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
       <div>
         <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-brand-gray">
           Correo electrónico

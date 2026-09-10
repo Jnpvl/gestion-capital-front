@@ -4,7 +4,7 @@ export interface AdminNavItem {
   label: string;
   href: string;
   description?: string;
-  icon: "dashboard" | "courses" | "students" | "staff";
+  icon: "dashboard" | "courses" | "students" | "staff" | "companies";
   badge?: string;
   adminOnly?: boolean;
 }
@@ -40,9 +40,9 @@ export const adminNavigation: AdminNavSection[] = [
     title: "Equipo",
     items: [
       {
-        label: "Staff",
+        label: "Instructores",
         href: "/admin/staff",
-        description: "Administradores y maestros",
+        description: "Capacitadores y administradores",
         icon: "staff",
         adminOnly: true,
       },
@@ -52,10 +52,16 @@ export const adminNavigation: AdminNavSection[] = [
     title: "Alumnos",
     items: [
       {
-        label: "Estudiantes",
-        href: "/admin/estudiantes",
-        description: "Alta, edición y acceso",
+        label: "Alumnos",
+        href: "/admin/alumnos",
+        description: "Estudiantes, particulares y trabajadores",
         icon: "students",
+      },
+      {
+        label: "Empresas",
+        href: "/admin/empresas",
+        description: "Datos de empleadores y expediente STPS",
+        icon: "companies",
       },
     ],
   },
@@ -88,7 +94,9 @@ export function getAdminNavigation(role: StaffRole) {
   return adminNavigation
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => !item.adminOnly || role === "admin"),
+      items: section.items.filter(
+        (item) => !item.adminOnly || role === "admin" || role === "super_admin",
+      ),
     }))
     .filter((section) => section.items.length > 0);
 }

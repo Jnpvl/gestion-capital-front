@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import type { CourseAssetKind } from "@/core/domain/courses/types";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
 import { UploadApiError, uploadCourseAsset } from "@/infrastructure/http/uploads-api";
+import { showError, showSuccess } from "@/shared/lib/alerts";
 import { resolveAssetUrl } from "@/shared/lib/resolve-asset-url";
 
 interface CourseAssetUploadProps {
@@ -15,6 +16,7 @@ interface CourseAssetUploadProps {
   label: string;
   hint?: string;
   accept: string;
+  showThumbnail?: boolean;
 }
 
 export function CourseAssetUpload({
@@ -25,10 +27,10 @@ export function CourseAssetUpload({
   label,
   hint,
   accept,
+  showThumbnail = true,
 }: CourseAssetUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState("");
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -36,18 +38,18 @@ export function CourseAssetUpload({
 
     const token = authStorage.getToken();
     if (!token) {
-      setError("Debes iniciar sesión para subir archivos");
+      showError("Debes iniciar sesión para subir archivos");
       return;
     }
 
     setIsUploading(true);
-    setError("");
 
     try {
       const path = await uploadCourseAsset(token, courseId, file, kind);
       onChange(path);
+      showSuccess("Archivo subido correctamente");
     } catch (err) {
-      setError(err instanceof UploadApiError ? err.message : "Error al subir el archivo");
+      showError(err instanceof UploadApiError ? err.message : "Error al subir el archivo");
     } finally {
       setIsUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -63,7 +65,7 @@ export function CourseAssetUpload({
         {hint && <p className="mt-1 text-xs text-brand-muted">{hint}</p>}
       </div>
 
-      {kind === "image" && value && (
+      {kind === "image" && showThumbnail && value && (
         <div className="relative aspect-[16/10] max-w-sm overflow-hidden rounded-xl border border-brand-line bg-brand-light">
           <Image src={resolveAssetUrl(value)} alt="Vista previa" fill className="object-cover" sizes="320px" />
         </div>
@@ -89,7 +91,10 @@ export function CourseAssetUpload({
         {value && (
           <button
             type="button"
-            onClick={() => onChange("")}
+            onClick={() => {
+              onChange("");
+              showSuccess("Archivo quitado. Recuerda guardar los cambios del curso.");
+            }}
             className="text-sm font-medium text-red-600 hover:underline"
           >
             Quitar
@@ -104,8 +109,6 @@ export function CourseAssetUpload({
         onChange={(e) => void handleFileChange(e)}
         className="hidden"
       />
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );
 }

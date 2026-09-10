@@ -9,6 +9,7 @@ const routes = [
   "/eventos/suscribete",
   "/contacto",
   "/por-que-elegirnos",
+  "/aviso-de-privacidad",
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

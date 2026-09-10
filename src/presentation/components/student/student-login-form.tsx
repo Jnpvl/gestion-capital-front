@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { showError } from "@/shared/lib/alerts";
 import { ApiClientError, useStudentAuth } from "@/presentation/providers/student-auth-provider";
 import { PasswordField } from "@/presentation/components/ui/password-field";
 
@@ -11,12 +12,10 @@ export function StudentLoginForm() {
   const { login } = useStudentAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError("");
     setIsSubmitting(true);
 
     try {
@@ -24,9 +23,9 @@ export function StudentLoginForm() {
       router.replace("/mis-cursos");
     } catch (err) {
       if (err instanceof ApiClientError) {
-        setError(err.message);
+        showError(err.message, "No se pudo iniciar sesión");
       } else {
-        setError("No se pudo iniciar sesión. Intenta de nuevo.");
+        showError("Intenta de nuevo.", "No se pudo iniciar sesión");
       }
     } finally {
       setIsSubmitting(false);
@@ -36,12 +35,6 @@ export function StudentLoginForm() {
   return (
     <div className="space-y-6">
       <form onSubmit={handleSubmit} className="space-y-5">
-        {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
         <div>
           <label htmlFor="student-email" className="mb-1.5 block text-sm font-medium text-brand-gray">
             Correo electrónico
@@ -79,6 +72,14 @@ export function StudentLoginForm() {
           {isSubmitting ? "Ingresando..." : "Ingresar a mis cursos"}
         </button>
       </form>
+
+      <p className="text-center text-xs leading-relaxed text-brand-muted">
+        En tu primer acceso te pediremos aceptar el{" "}
+        <Link href="/aviso-de-privacidad" className="font-medium text-brand-blue hover:underline">
+          aviso de privacidad
+        </Link>
+        . Si no lo aceptas, no podrás entrar a tus cursos.
+      </p>
 
       <div className="rounded-xl border border-brand-line bg-brand-light/60 px-4 py-4 text-center">
         <p className="text-sm text-brand-muted">¿Aún no tienes acceso?</p>

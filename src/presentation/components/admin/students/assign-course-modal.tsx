@@ -1,18 +1,30 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { CourseListItem } from "@/core/domain/courses/types";
-import type { StudentEnrollment } from "@/core/domain/students/types";
+import type { CourseListItem, CourseModality } from "@/core/domain/courses/types";
+import type { EnrollmentDeliveryMode, StudentEnrollment } from "@/core/domain/students/types";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
 import { listCourses, CoursesApiError } from "@/infrastructure/http/courses-api";
 import {
   assignCourseToStudent,
   StudentsApiError,
 } from "@/infrastructure/http/students-api";
+import { showError, showSuccess, showWarning } from "@/shared/lib/alerts";
+import { cn } from "@/shared/lib/cn";
+
+type EnrollmentType = "particular" | "company";
+
+function defaultDeliveryMode(modality: string | null | undefined): EnrollmentDeliveryMode {
+  return modality === "presencial" ? "presencial" : "online";
+}
 
 interface AssignCourseModalProps {
   studentId: string;
   studentName: string;
+  studentCompanyName?: string | null;
+  studentCompanyRfc?: string | null;
+  studentCurp?: string | null;
+  studentStpsOccupationCode?: string | null;
   enrollments: StudentEnrollment[];
   onClose: () => void;
   onAssigned: () => void;
@@ -21,15 +33,22 @@ interface AssignCourseModalProps {
 export function AssignCourseModal({
   studentId,
   studentName,
+  studentCompanyName,
+  studentCompanyRfc,
+  studentCurp,
+  studentStpsOccupationCode,
   enrollments,
   onClose,
   onAssigned,
 }: AssignCourseModalProps) {
   const [courses, setCourses] = useState<CourseListItem[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState("");
+  const [enrollmentType, setEnrollmentType] = useState<EnrollmentType>(
+    studentCompanyName ? "company" : "particular",
+  );
+  const [deliveryMode, setDeliveryMode] = useState<EnrollmentDeliveryMode>("online");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState("");
 
   const activeCourseIds = useMemo(
     () => new Set(enrollments.filter((item) => item.status === "active").map((item) => item.courseId)),
@@ -45,20 +64,24 @@ export function AssignCourseModal({
     async function loadCourses() {
       const token = authStorage.getToken();
       if (!token) {
-        setError("Debes iniciar sesión");
+        showError("Debes iniciar sesión");
         setIsLoading(false);
         return;
       }
 
       setIsLoading(true);
-      setError("");
 
       try {
         const result = await listCourses(token, { status: "published", limit: 50 });
-        setCourses(result.courses);
-        setSelectedCourseId(result.courses.find((course) => !activeCourseIds.has(course.id))?.id ?? "");
+        const nextCourses = result.courses;
+        setCourses(nextCourses);
+        const firstAvailable = nextCourses.find((course) => !activeCourseIds.has(course.id));
+        setSelectedCourseId(firstAvailable?.id ?? "");
+        setDeliveryMode(defaultDeliveryMode(firstAvailable?.modality));
       } catch (err) {
-        setError(err instanceof CoursesApiError ? err.message : "No se pudieron cargar los cursos");
+        showError(
+          err instanceof CoursesApiError ? err.message : "No se pudieron cargar los cursos",
+        );
       } finally {
         setIsLoading(false);
       }
@@ -70,21 +93,61 @@ export function AssignCourseModal({
   async function handleAssign() {
     if (!selectedCourseId) return;
 
+    const enrolledViaCompany = enrollmentType === "company";
+
+    if (enrolledViaCompany) {
+      if (!studentCompanyName?.trim()) {
+        showWarning(
+          "Registra la empresa del estudiante en su perfil antes de asignar un curso con DC3.",
+          "Falta la empresa",
+        );
+        return;
+      }
+      if (!studentCompanyRfc?.trim()) {
+        showWarning(
+          "Registra el RFC de la empresa en el perfil del estudiante.",
+          "Falta RFC",
+        );
+        return;
+      }
+      if (!studentCurp?.trim()) {
+        showWarning("Registra la CURP del estudiante en su perfil.", "Falta CURP");
+        return;
+      }
+      if (!studentStpsOccupationCode) {
+        showWarning(
+          "Registra el puesto del catálogo STPS en el perfil del estudiante.",
+          "Falta puesto",
+        );
+        return;
+      }
+    }
+
     const token = authStorage.getToken();
     if (!token) {
-      setError("Debes iniciar sesión");
+      showError("Debes iniciar sesión");
       return;
     }
 
     setIsSubmitting(true);
-    setError("");
 
     try {
-      await assignCourseToStudent(token, studentId, selectedCourseId);
+      await assignCourseToStudent(
+        token,
+        studentId,
+        selectedCourseId,
+        enrolledViaCompany,
+        deliveryMode,
+      );
+      showSuccess(
+        enrolledViaCompany
+          ? "Curso asignado. Al terminar podrá descargar constancia y DC3."
+          : "Curso asignado. Al terminar podrá descargar la constancia.",
+      );
       onAssigned();
       onClose();
     } catch (err) {
-      setError(err instanceof StudentsApiError ? err.message : "No se pudo asignar el curso");
+      showError(err instanceof StudentsApiError ? err.message : "No se pudo asignar el curso");
     } finally {
       setIsSubmitting(false);
     }
@@ -98,7 +161,7 @@ export function AssignCourseModal({
         onClick={onClose}
         className="absolute inset-0 bg-brand-gray/40"
       />
-      <div className="relative w-full max-w-md rounded-2xl border border-brand-line bg-white p-6 shadow-xl">
+      <div className="relative w-full max-w-lg rounded-2xl border border-brand-line bg-white p-6 shadow-xl">
         <h2 className="font-display text-lg font-bold text-brand-gray">Asignar curso</h2>
         <p className="mt-2 text-sm text-brand-muted">
           Selecciona un curso <strong className="text-brand-gray">publicado</strong> para{" "}
@@ -120,7 +183,12 @@ export function AssignCourseModal({
             <select
               id="assign-course"
               value={selectedCourseId}
-              onChange={(e) => setSelectedCourseId(e.target.value)}
+              onChange={(e) => {
+                const nextId = e.target.value;
+                setSelectedCourseId(nextId);
+                const selected = availableCourses.find((course) => course.id === nextId);
+                setDeliveryMode(defaultDeliveryMode(selected?.modality as CourseModality | null));
+              }}
               className="w-full rounded-lg border border-brand-line bg-white px-4 py-2.5 text-sm text-brand-gray outline-none focus:border-brand-blue"
             >
               {availableCourses.map((course) => (
@@ -132,10 +200,135 @@ export function AssignCourseModal({
           )}
         </div>
 
-        {error && (
-          <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </p>
+        {availableCourses.length > 0 && (
+          <fieldset className="mt-4 space-y-3">
+            <legend className="text-sm font-medium text-brand-gray">
+              Tipo de inscripción
+            </legend>
+            <p className="text-xs text-brand-muted">
+              Define qué constancias podrá descargar el alumno al completar el curso.
+            </p>
+
+            <div className="space-y-2">
+              <label
+                className={cn(
+                  "flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors",
+                  enrollmentType === "particular"
+                    ? "border-brand-blue bg-brand-blue/5"
+                    : "border-brand-line bg-brand-light/40 hover:bg-brand-light/70",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="enrollment-type"
+                  value="particular"
+                  checked={enrollmentType === "particular"}
+                  onChange={() => setEnrollmentType("particular")}
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-brand-gray">Particular</span>
+                  <span className="mt-1 block text-xs text-brand-muted">
+                    Solo constancia de finalización al terminar el curso.
+                  </span>
+                </span>
+              </label>
+
+              <label
+                className={cn(
+                  "flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors",
+                  enrollmentType === "company"
+                    ? "border-brand-blue bg-brand-blue/5"
+                    : "border-brand-line bg-brand-light/40 hover:bg-brand-light/70",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="enrollment-type"
+                  value="company"
+                  checked={enrollmentType === "company"}
+                  onChange={() => setEnrollmentType("company")}
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-brand-gray">Con empresa</span>
+                  <span className="mt-1 block text-xs text-brand-muted">
+                    Constancia y DC3 al finalizar. Requiere que el estudiante tenga empresa
+                    registrada.
+                    {studentCompanyName ? (
+                      <>
+                        {" "}
+                        Empresa:{" "}
+                        <span className="font-medium text-brand-gray">{studentCompanyName}</span>
+                      </>
+                    ) : (
+                      <span className="mt-1 block font-medium text-amber-700">
+                        Este estudiante aún no tiene empresa en su perfil.
+                      </span>
+                    )}
+                  </span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+        )}
+
+        {availableCourses.length > 0 && (
+          <fieldset className="mt-4 space-y-3">
+            <legend className="text-sm font-medium text-brand-gray">Modalidad</legend>
+            <p className="text-xs text-brand-muted">
+              En línea se marca como terminado al completar el curso. Presencial lo marcas tú.
+            </p>
+            <div className="space-y-2">
+              <label
+                className={cn(
+                  "flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors",
+                  deliveryMode === "online"
+                    ? "border-brand-blue bg-brand-blue/5"
+                    : "border-brand-line bg-brand-light/40 hover:bg-brand-light/70",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="delivery-mode"
+                  value="online"
+                  checked={deliveryMode === "online"}
+                  onChange={() => setDeliveryMode("online")}
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-brand-gray">En línea</span>
+                  <span className="mt-1 block text-xs text-brand-muted">
+                    El alumno cursa en la plataforma. Al terminar, queda como terminado y puede
+                    descargar la constancia.
+                  </span>
+                </span>
+              </label>
+              <label
+                className={cn(
+                  "flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors",
+                  deliveryMode === "presencial"
+                    ? "border-brand-blue bg-brand-blue/5"
+                    : "border-brand-line bg-brand-light/40 hover:bg-brand-light/70",
+                )}
+              >
+                <input
+                  type="radio"
+                  name="delivery-mode"
+                  value="presencial"
+                  checked={deliveryMode === "presencial"}
+                  onChange={() => setDeliveryMode("presencial")}
+                  className="mt-0.5"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-brand-gray">Presencial</span>
+                  <span className="mt-1 block text-xs text-brand-muted">
+                    Tú marcas el curso como terminado para poder exportar la constancia.
+                  </span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
         )}
 
         <div className="mt-6 flex justify-end gap-3">

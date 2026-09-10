@@ -1,5 +1,6 @@
 export {
   footerNavigation,
+  legalNavigation,
   mainNavigation,
   siteConfig,
   socialLinks,

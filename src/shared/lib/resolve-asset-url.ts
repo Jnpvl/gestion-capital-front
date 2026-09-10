@@ -1,15 +1,16 @@
 import { env } from "@/shared/config/env";
 
-function isCourseUploadPath(path: string): boolean {
+function isApiAssetPath(path: string): boolean {
   return (
     path.startsWith("/uploads/") ||
+    path.startsWith("/templates/") ||
     path.startsWith("/images/cursos/") ||
     path.startsWith("/files/cursos/")
   );
 }
 
-function normalizeCourseUploadPath(path: string): string {
-  if (path.startsWith("/uploads/")) return path;
+function normalizeApiAssetPath(path: string): string {
+  if (path.startsWith("/uploads/") || path.startsWith("/templates/")) return path;
   return `/uploads${path}`;
 }
 
@@ -21,9 +22,9 @@ export function resolveAssetUrl(path: string | null | undefined): string {
     return path;
   }
 
-  if (isCourseUploadPath(path)) {
+  if (isApiAssetPath(path)) {
     const base = env.apiUrl.replace(/\/$/, "");
-    return `${base}${normalizeCourseUploadPath(path)}`;
+    return `${base}${normalizeApiAssetPath(path)}`;
   }
 
   return path;

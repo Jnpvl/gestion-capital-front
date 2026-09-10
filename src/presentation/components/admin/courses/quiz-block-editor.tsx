@@ -2,6 +2,7 @@
 
 import type { QuizContent, QuizQuestion } from "@/core/domain/courses/quiz";
 import {
+  countReadyQuizQuestions,
   createQuizQuestion,
   parseQuizContent,
   serializeQuizContent,
@@ -11,10 +12,16 @@ import { cn } from "@/shared/lib/cn";
 interface QuizBlockEditorProps {
   content: string | null;
   onChange: (content: string) => void;
+  variant?: "practice" | "final";
 }
 
-export function QuizBlockEditor({ content, onChange }: QuizBlockEditorProps) {
+export function QuizBlockEditor({
+  content,
+  onChange,
+  variant = "practice",
+}: QuizBlockEditorProps) {
   const quiz = parseQuizContent(content);
+  const readyQuestionCount = countReadyQuizQuestions(quiz);
 
   function updateQuiz(patch: Partial<QuizContent>) {
     onChange(serializeQuizContent({ ...quiz, ...patch }));
@@ -57,11 +64,26 @@ export function QuizBlockEditor({ content, onChange }: QuizBlockEditorProps) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-brand-blue/20 bg-brand-blue/5 px-4 py-3 text-sm text-brand-muted">
-        <p className="font-medium text-brand-blue">Quiz de opción múltiple</p>
+      <div
+        className={cn(
+          "rounded-lg border px-4 py-3 text-sm text-brand-muted",
+          variant === "final"
+            ? "border-amber-200 bg-amber-50"
+            : "border-brand-blue/20 bg-brand-blue/5",
+        )}
+      >
+        <p
+          className={cn(
+            "font-medium",
+            variant === "final" ? "text-amber-900" : "text-brand-blue",
+          )}
+        >
+          {variant === "final" ? "Examen final del curso" : "Quiz de opción múltiple"}
+        </p>
         <p className="mt-1">
-          Crea preguntas con varias opciones y marca cuál es la correcta. El alumno podrá verificar sus
-          respuestas al terminar. El examen final del curso será una sección aparte.
+          {variant === "final"
+            ? "Arma el cuestionario de cierre del curso. El alumno debe obtener al menos 80% para aprobar."
+            : "Crea preguntas con varias opciones y marca cuál es la correcta. Se aprueba con el 80%."}
         </p>
       </div>
 
@@ -77,6 +99,13 @@ export function QuizBlockEditor({ content, onChange }: QuizBlockEditorProps) {
           className="w-full rounded-lg border border-brand-line px-4 py-2.5 text-sm outline-none focus:border-brand-blue"
         />
       </div>
+
+      <p className="text-xs text-brand-muted">
+        Aprobación fija: 80% de aciertos
+        {readyQuestionCount > 0
+          ? ` (${Math.ceil((readyQuestionCount * 80) / 100)} de ${readyQuestionCount} preguntas).`
+          : "."}
+      </p>
 
       {quiz.questions.length === 0 ? (
         <p className="rounded-lg border border-dashed border-brand-line bg-brand-light/40 px-4 py-6 text-center text-sm text-brand-muted">

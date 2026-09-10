@@ -1,25 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { showSuccess } from "@/shared/lib/alerts";
+import Link from "next/link";
 
 export function SubscribeForm() {
-  const [submitted, setSubmitted] = useState(false);
-
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSubmitted(true);
-  }
-
-  if (submitted) {
-    return (
-      <div className="rounded-xl border border-brand-line bg-white p-8 text-center">
-        <p className="font-medium text-brand-gray">¡Gracias por suscribirte!</p>
-        <p className="mt-2 text-sm text-brand-muted">
-          Pronto recibirás novedades sobre eventos y capacitaciones.
-          (Formulario de demostración — se conectará al panel administrativo.)
-        </p>
-      </div>
+    showSuccess(
+      "Pronto recibirás novedades sobre eventos y capacitaciones.",
+      "¡Gracias por suscribirte!",
     );
+    e.currentTarget.reset();
   }
 
   return (
@@ -65,6 +56,13 @@ export function SubscribeForm() {
       >
         Suscribirme
       </button>
+      <p className="text-xs leading-relaxed text-brand-muted">
+        Al suscribirte aceptas nuestro{" "}
+        <Link href="/aviso-de-privacidad" className="font-medium text-brand-blue hover:underline">
+          aviso de privacidad
+        </Link>
+        .
+      </p>
     </form>
   );
 }

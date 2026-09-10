@@ -11,13 +11,14 @@ import {
 } from "react";
 import type { StudentUser } from "@/core/domain/student/types";
 import { studentAuthStorage } from "@/infrastructure/auth/student-auth-storage";
-import { ApiClientError, getStudentMe, studentLogin } from "@/infrastructure/http/student-auth-api";
+import { ApiClientError, acceptStudentPrivacy, getStudentMe, studentLogin } from "@/infrastructure/http/student-auth-api";
 
 interface StudentAuthContextValue {
   user: StudentUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  acceptPrivacy: () => Promise<void>;
   logout: () => void;
 }
 
@@ -56,6 +57,16 @@ export function StudentAuthProvider({ children }: { children: ReactNode }) {
     setUser(studentUser);
   }, []);
 
+  const acceptPrivacy = useCallback(async () => {
+    const token = studentAuthStorage.getToken();
+    if (!token) {
+      throw new Error("No hay sesión activa");
+    }
+
+    const { user: studentUser } = await acceptStudentPrivacy(token);
+    setUser(studentUser);
+  }, []);
+
   const logout = useCallback(() => {
     studentAuthStorage.clearToken();
     setUser(null);
@@ -67,9 +78,10 @@ export function StudentAuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       isAuthenticated: Boolean(user),
       login,
+      acceptPrivacy,
       logout,
     }),
-    [user, isLoading, login, logout],
+    [user, isLoading, login, acceptPrivacy, logout],
   );
 
   return <StudentAuthContext.Provider value={value}>{children}</StudentAuthContext.Provider>;

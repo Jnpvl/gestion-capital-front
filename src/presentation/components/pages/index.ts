@@ -1,3 +1,4 @@
+export { AvisoPrivacidadPageView } from "./aviso-privacidad-page";
 export { ContactForm } from "./contact-form";
 export { ContactoPageView } from "./contacto-page";
 export { EventosPageView } from "./eventos-page";

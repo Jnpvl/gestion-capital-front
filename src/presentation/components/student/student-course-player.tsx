@@ -11,6 +11,7 @@ import {
   getCourseProgress,
   saveCourseProgress,
 } from "@/infrastructure/http/student-progress-api";
+import { showError } from "@/shared/lib/alerts";
 
 interface StudentCoursePlayerProps {
   slug: string;
@@ -35,7 +36,9 @@ export function StudentCoursePlayer({ slug }: StudentCoursePlayerProps) {
         setCourse(courseResult.course);
         setProgress(progressResult.progress);
       } catch {
-        setError("No se pudo cargar el curso o no tienes acceso.");
+        const message = "No se pudo cargar el curso o no tienes acceso.";
+        setError(message);
+        showError(message);
       } finally {
         setIsLoading(false);
       }
@@ -63,7 +66,7 @@ export function StudentCoursePlayer({ slug }: StudentCoursePlayerProps) {
   if (error || !course) {
     return (
       <div className="space-y-4">
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-brand-line bg-brand-light px-4 py-3 text-sm text-brand-muted">
           {error || "Curso no disponible."}
         </div>
         <Link href="/mis-cursos" className="text-sm font-semibold text-brand-blue hover:underline">

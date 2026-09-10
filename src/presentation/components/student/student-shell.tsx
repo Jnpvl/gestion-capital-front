@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { PrivacyConsentGate } from "@/presentation/components/legal/privacy-consent-gate";
 import { Logo } from "@/presentation/components/ui/logo";
 import { useStudentAuth } from "@/presentation/providers/student-auth-provider";
 
@@ -12,7 +13,7 @@ interface StudentShellProps {
 
 export function StudentShell({ children }: StudentShellProps) {
   const router = useRouter();
-  const { user, isLoading, logout } = useStudentAuth();
+  const { user, isLoading, logout, acceptPrivacy } = useStudentAuth();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -30,6 +31,18 @@ export function StudentShell({ children }: StudentShellProps) {
 
   if (!user) {
     return null;
+  }
+
+  if (!user.privacyAccepted) {
+    return (
+      <PrivacyConsentGate
+        onAccept={acceptPrivacy}
+        onDecline={() => {
+          logout();
+          router.replace("/");
+        }}
+      />
+    );
   }
 
   return (

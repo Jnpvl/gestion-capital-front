@@ -52,4 +52,15 @@ export async function getStudentMe(token: string) {
   return parseResponse<StudentMeResponse>(response);
 }
 
+export async function acceptStudentPrivacy(token: string) {
+  const response = await fetch(`${env.apiUrl}/api/auth/student/privacy`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return parseResponse<StudentMeResponse>(response);
+}
+
 export { ApiClientError };

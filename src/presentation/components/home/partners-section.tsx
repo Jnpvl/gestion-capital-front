@@ -15,15 +15,20 @@ function PartnerLogo({
   name,
   logo,
   className = "h-11 w-28",
+  backgroundColor,
 }: {
   name: string;
   logo?: string;
   className?: string;
+  backgroundColor?: string;
 }) {
   if (logo) {
     return (
       <div
-        className={`relative shrink-0 overflow-hidden rounded-lg border border-brand-gray/20 bg-brand-gray shadow-sm ${className}`}
+        className={`relative shrink-0 overflow-hidden rounded-lg border shadow-sm ${
+          backgroundColor ? "border-black/10" : "border-brand-gray/20 bg-brand-gray"
+        } ${className}`}
+        style={backgroundColor ? { backgroundColor } : undefined}
       >
         <Image src={logo} alt={name} fill className="object-contain p-2" sizes="112px" />
       </div>
@@ -41,22 +46,50 @@ function PartnerCard({
   name,
   description,
   logo,
+  href,
+  brandColor,
 }: {
   name: string;
   description?: string;
   logo?: string;
+  href?: string;
+  brandColor?: string;
 }) {
-  return (
-    <div className="flex h-full flex-col rounded-xl border border-brand-line bg-white p-6">
+  const cardClassName =
+    "flex h-full flex-col rounded-xl border border-brand-line bg-white p-6 transition-shadow";
+
+  const inner = (
+    <>
       <div className="flex items-center gap-4">
-        <PartnerLogo name={name} logo={logo} className="h-12 w-32" />
+        <PartnerLogo
+          name={name}
+          logo={logo}
+          backgroundColor={brandColor}
+          className="h-12 w-32"
+        />
         <h3 className="font-display text-base font-bold text-brand-gray">{name}</h3>
       </div>
       {description && (
         <p className="mt-4 text-sm leading-relaxed text-brand-muted">{description}</p>
       )}
-    </div>
+    </>
   );
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Visitar el sitio oficial de ${name}`}
+        className={`${cardClassName} hover:border-brand-gold/50 hover:shadow-md`}
+      >
+        {inner}
+      </a>
+    );
+  }
+
+  return <div className={cardClassName}>{inner}</div>;
 }
 
 function ClientBadge({ name, logo }: { name: string; logo?: string }) {
@@ -88,7 +121,7 @@ export function PartnersSection() {
         <div className="text-center">
           <h2
             id="partners-heading"
-            className="font-display text-2xl font-bold text-brand-gray sm:text-3xl"
+            className="font-display text-2xl font-bold text-brand-gold sm:text-3xl"
           >
             {allies.title}
           </h2>
@@ -104,6 +137,8 @@ export function PartnersSection() {
               name={partner.name}
               description={partner.description}
               logo={partner.logo}
+              href={partner.href}
+              brandColor={partner.brandColor}
             />
           ))}
         </div>

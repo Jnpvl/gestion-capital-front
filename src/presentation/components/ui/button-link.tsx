@@ -4,7 +4,7 @@ import { cn } from "@/shared/lib/cn";
 interface ButtonLinkProps {
   href: string;
   children: React.ReactNode;
-  variant?: "primary" | "secondary" | "outline" | "ghost" | "inverse";
+  variant?: "primary" | "secondary" | "gold" | "outline" | "ghost" | "inverse";
   size?: "sm" | "md" | "lg";
   className?: string;
   external?: boolean;
@@ -13,6 +13,7 @@ interface ButtonLinkProps {
 const variants = {
   primary: "bg-brand-black text-white hover:bg-brand-gray",
   secondary: "bg-brand-blue text-white hover:bg-brand-blue-light",
+  gold: "bg-brand-gold text-white hover:bg-brand-gold-light",
   outline:
     "border border-brand-line bg-white text-brand-gray hover:border-brand-blue/40 hover:text-brand-blue",
   ghost: "text-brand-gray hover:bg-brand-light",

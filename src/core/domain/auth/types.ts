@@ -1,4 +1,8 @@
-export type StaffRole = "admin" | "teacher";
+export type StaffRole = "super_admin" | "admin" | "teacher";
+
+export function isElevatedStaffRole(role: StaffRole | null | undefined): boolean {
+  return role === "admin" || role === "super_admin";
+}
 
 export interface StaffUser {
   id: string;
@@ -19,9 +23,8 @@ export interface StaffMeResponse {
 }
 
 export interface ApiErrorBody {
-  error: {
-    message: string;
+  error?: {
+    message?: string;
     code?: string;
-    details?: Record<string, string[] | undefined>;
   };
 }

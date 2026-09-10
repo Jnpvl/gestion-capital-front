@@ -42,7 +42,6 @@ export function CoursesTable({ courses, isLoading }: CoursesTableProps) {
             <th className="px-4 py-3 font-semibold">Clases</th>
             <th className="px-4 py-3 font-semibold">Estudiantes</th>
             <th className="px-4 py-3 font-semibold">Catálogo</th>
-            <th className="px-4 py-3 font-semibold">Destacado</th>
             <th className="px-6 py-3 font-semibold text-right">Acciones</th>
           </tr>
         </thead>
@@ -70,7 +69,6 @@ export function CoursesTable({ courses, isLoading }: CoursesTableProps) {
                 <td className="px-4 py-4 text-brand-muted">
                   {course.showInCatalog ? "Sí" : "No"}
                 </td>
-                <td className="px-4 py-4 text-brand-muted">{course.featured ? "Sí" : "No"}</td>
                 <td className="px-6 py-4 text-right">
                   <Tooltip label="Editar curso">
                     <Link

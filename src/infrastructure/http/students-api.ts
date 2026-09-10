@@ -5,6 +5,7 @@ import type {
   StudentsListResponse,
   UpdateStudentInput,
 } from "@/core/domain/students/types";
+import type { AlumnoType } from "@/core/domain/students/alumno-types";
 import type { ApiErrorBody } from "@/core/domain/auth/types";
 import { env } from "@/shared/config/env";
 
@@ -13,6 +14,7 @@ class StudentsApiError extends Error {
     message: string,
     public readonly status: number,
     public readonly code?: string,
+    public readonly details?: Record<string, string[] | undefined>,
   ) {
     super(message);
     this.name = "StudentsApiError";
@@ -38,6 +40,7 @@ async function request<T>(path: string, token: string, options?: RequestInit): P
       error?.error?.message ?? "Error en la solicitud",
       response.status,
       error?.error?.code,
+      error?.error?.details,
     );
   }
 
@@ -46,11 +49,12 @@ async function request<T>(path: string, token: string, options?: RequestInit): P
 
 export async function listStudents(
   token: string,
-  params?: { search?: string; active?: boolean; page?: number; limit?: number },
+  params?: { search?: string; active?: boolean; alumnoType?: AlumnoType; page?: number; limit?: number },
 ) {
   const query = new URLSearchParams();
   if (params?.search) query.set("search", params.search);
   if (params?.active !== undefined) query.set("active", String(params.active));
+  if (params?.alumnoType) query.set("alumnoType", params.alumnoType);
   if (params?.page) query.set("page", String(params.page));
   if (params?.limit) query.set("limit", String(params.limit));
   const qs = query.toString();
@@ -90,11 +94,29 @@ export async function updateStudentStatus(token: string, id: string, active: boo
   });
 }
 
-export async function assignCourseToStudent(token: string, studentId: string, courseId: string) {
+export async function assignCourseToStudent(
+  token: string,
+  studentId: string,
+  courseId: string,
+  enrolledViaCompany = false,
+  deliveryMode: "online" | "presencial" = "online",
+) {
   return request<{ enrollment: StudentEnrollment }>(`/${studentId}/enrollments`, token, {
     method: "POST",
-    body: JSON.stringify({ courseId }),
+    body: JSON.stringify({ courseId, enrolledViaCompany, deliveryMode }),
   });
+}
+
+export async function markStudentEnrollmentCompleted(
+  token: string,
+  studentId: string,
+  enrollmentId: string,
+) {
+  return request<{ enrollment: StudentEnrollment }>(
+    `/${studentId}/enrollments/${enrollmentId}/complete`,
+    token,
+    { method: "PATCH" },
+  );
 }
 
 export async function revokeStudentEnrollment(

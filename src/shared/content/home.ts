@@ -2,6 +2,8 @@ export interface Partner {
   name: string;
   description?: string;
   logo?: string;
+  href?: string;
+  brandColor?: string;
 }
 
 export interface ServiceItem {
@@ -34,7 +36,7 @@ export const homeContent = {
     { value: "STPS", detail: "Agentes Capacitadores Externos registrados" },
     {
       value: "CONOCER",
-      detail: "Instructores expertos en la materia y certificados en CONOCER",
+      detail: "Instructores certificados y expertos en la materia",
     },
   ] satisfies StatItem[],
   services: {
@@ -86,18 +88,24 @@ export const homeContent = {
         {
           name: "Proethic",
           logo: "/images/aliados/proethic.png",
+          href: "https://www.proethic.com.mx/",
+          brandColor: "#046B43",
           description:
             "Cursos con enfoque social y ambiental, con contenidos de seguridad y responsabilidad organizacional.",
         },
         {
           name: "Desierto Solar",
           logo: "/images/aliados/desierto-solar.png",
+          href: "https://sites.google.com/view/desiertosolar/inicio",
+          brandColor: "#FABE28",
           description:
             "Especialistas en electricidad y paneles solares, con programas de formación en energía y temas técnicos relacionados.",
         },
         {
           name: "ASLA",
           logo: "/images/aliados/asla.png",
+          href: "https://www.facebook.com/profile.php?id=61592745845144",
+          brandColor: "#1B4F9C",
           description:
             "Seguridad e higiene y asesoría especializada para fortalecer la prevención de riesgos en el trabajo.",
         },

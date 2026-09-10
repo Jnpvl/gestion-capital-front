@@ -1,5 +1,12 @@
-import { StudentDetailContent } from "@/presentation/components/admin/students/student-detail-content";
+import { redirect } from "next/navigation";
 
-export default function AdminEstudianteDetailPage() {
-  return <StudentDetailContent />;
+interface EstudiantesDetailRedirectPageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default async function AdminEstudianteDetailRedirectPage({
+  params,
+}: EstudiantesDetailRedirectPageProps) {
+  const { id } = await params;
+  redirect(`/admin/alumnos/${id}`);
 }

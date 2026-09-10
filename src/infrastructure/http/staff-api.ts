@@ -1,5 +1,10 @@
 import type { ApiErrorBody } from "@/core/domain/auth/types";
-import type { CreateStaffInput, StaffListResponse } from "@/core/domain/staff/types";
+import type {
+  CreateStaffInput,
+  StaffDetail,
+  StaffListResponse,
+  UpdateStaffInput,
+} from "@/core/domain/staff/types";
 import type { StaffUser } from "@/core/domain/auth/types";
 import { env } from "@/shared/config/env";
 
@@ -60,9 +65,20 @@ export async function listStaff(
   return request<StaffListResponse>(qs ? `?${qs}` : "", token);
 }
 
+export async function getStaff(token: string, id: string) {
+  return request<{ staff: StaffDetail }>(`/${id}`, token);
+}
+
 export async function createStaff(token: string, input: CreateStaffInput) {
-  return request<{ staff: StaffUser }>("", token, {
+  return request<{ staff: StaffDetail }>("", token, {
     method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateStaff(token: string, id: string, input: UpdateStaffInput) {
+  return request<{ staff: StaffDetail }>(`/${id}`, token, {
+    method: "PATCH",
     body: JSON.stringify(input),
   });
 }

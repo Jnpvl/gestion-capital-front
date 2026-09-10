@@ -3,6 +3,7 @@ export interface StudentUser {
   name: string;
   email: string;
   active: boolean;
+  privacyAccepted: boolean;
   createdAt: string;
 }
 
@@ -26,6 +27,10 @@ export interface StudentCourseListItem {
   lessonsCount: number;
   completedLessons: number;
   progressPercent: number;
+  canDownloadCertificate: boolean;
+  canDownloadDc3: boolean;
+  deliveryMode: "online" | "presencial";
+  completed: boolean;
   enrolledAt: string;
 }
 
