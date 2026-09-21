@@ -8,55 +8,24 @@ interface LogoProps {
 }
 
 const sizes = {
-  sm: {
-    icon: "h-9 w-9",
-    title: "text-base",
-    subtitle: "text-[9px]",
-  },
-  md: {
-    icon: "h-10 w-10",
-    title: "text-lg",
-    subtitle: "text-[10px]",
-  },
-  lg: {
-    icon: "h-14 w-14 sm:h-16 sm:w-16",
-    title: "text-2xl sm:text-3xl",
-    subtitle: "text-[11px] sm:text-xs",
-  },
+  sm: { width: 148, height: 48, className: "h-9 w-auto" },
+  md: { width: 180, height: 58, className: "h-10 w-auto" },
+  lg: { width: 240, height: 78, className: "h-12 w-auto sm:h-14" },
 } as const;
 
 export function Logo({ size = "md", className, priority = false }: LogoProps) {
   const config = sizes[size];
 
   return (
-    <div className={cn("flex items-center gap-3", className)}>
-      <Image
-        src="/images/icon.png"
-        alt=""
-        width={64}
-        height={64}
-        className={cn(config.icon, "shrink-0 brightness-0")}
-        priority={priority}
-        aria-hidden="true"
-      />
-      <div className="leading-tight">
-        <span
-          className={cn(
-            "block font-display font-bold tracking-tight text-brand-gray",
-            config.title,
-          )}
-        >
-          Gestiona
-        </span>
-        <span
-          className={cn(
-            "block font-medium tracking-[0.22em] text-brand-muted uppercase",
-            config.subtitle,
-          )}
-        >
-          Capital Humano
-        </span>
-      </div>
-    </div>
+    <Image
+      src="/images/logo.png"
+      alt="Gestiona Capital Humano"
+      width={config.width}
+      height={config.height}
+      className={cn(config.className, "brightness-0", className)}
+      priority={priority}
+      loading="eager"
+      fetchPriority={priority ? "high" : "auto"}
+    />
   );
 }

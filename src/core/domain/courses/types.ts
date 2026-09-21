@@ -10,6 +10,77 @@ export type LessonBlockType =
   | "assignment";
 export type CourseAssetKind = "image" | "pdf";
 
+export interface CourseParticipantProfile {
+  psychographics: string;
+  knowledge: string;
+  skills: string;
+}
+
+export interface CourseObjectiveItem {
+  label: string;
+  text: string;
+}
+
+export interface CourseObjectives {
+  general: string;
+  items: CourseObjectiveItem[];
+}
+
+export interface CourseSyllabusUnit {
+  title: string;
+  topics: string[];
+}
+
+export const EMPTY_PARTICIPANT_PROFILE: CourseParticipantProfile = {
+  psychographics: "",
+  knowledge: "",
+  skills: "",
+};
+
+export const EMPTY_OBJECTIVES: CourseObjectives = {
+  general: "",
+  items: [],
+};
+
+export function normalizeParticipantProfile(
+  value?: CourseParticipantProfile | null,
+): CourseParticipantProfile {
+  return {
+    psychographics: value?.psychographics?.trim() ?? "",
+    knowledge: value?.knowledge?.trim() ?? "",
+    skills: value?.skills?.trim() ?? "",
+  };
+}
+
+export function normalizeObjectives(value?: CourseObjectives | null): CourseObjectives {
+  return {
+    general: value?.general?.trim() ?? "",
+    items: (value?.items ?? [])
+      .map((item) => ({
+        label: item.label?.trim() ?? "",
+        text: item.text?.trim() ?? "",
+      }))
+      .filter((item) => item.text.length > 0),
+  };
+}
+
+export function normalizeSyllabus(value?: CourseSyllabusUnit[] | null): CourseSyllabusUnit[] {
+  return (value ?? [])
+    .map((unit) => ({
+      title: unit.title?.trim() ?? "",
+      topics: (unit.topics ?? []).map((topic) => topic.trim()).filter(Boolean),
+    }))
+    .filter((unit) => unit.title.length > 0);
+}
+
+export function hasParticipantProfile(profile: CourseParticipantProfile): boolean {
+  return Boolean(profile.psychographics || profile.knowledge || profile.skills);
+}
+
+export function hasObjectives(objectives: CourseObjectives): boolean {
+  return Boolean(objectives.general || objectives.items.length > 0);
+}
+
 export interface CourseListItem {
   id: string;
   title: string;
@@ -40,6 +111,9 @@ export interface CoursePublicCard {
 export interface CoursePublicDetail extends CoursePublicCard {
   description: string | null;
   highlights: string[];
+  participantProfile: CourseParticipantProfile;
+  objectives: CourseObjectives;
+  syllabus: CourseSyllabusUnit[];
 }
 
 export interface LessonBlock {
@@ -77,6 +151,9 @@ export interface CourseDetail {
   duration: string | null;
   level: string | null;
   highlights: string[];
+  participantProfile?: CourseParticipantProfile | null;
+  objectives?: CourseObjectives | null;
+  syllabus?: CourseSyllabusUnit[] | null;
   status: CourseStatus;
   showInCatalog: boolean;
   featured: boolean;
