@@ -26,8 +26,13 @@ export function showSuccess(message: string, title = "¡Listo!") {
   return toast.fire({ icon: "success", title, text: message });
 }
 
-export function showError(message: string, title = "Error") {
-  return toast.fire({ icon: "error", title, text: message });
+export function showError(message: string, title = "No se pudo completar") {
+  const text = message.trim() || "Ocurrió un problema. Inténtalo de nuevo.";
+  return toast.fire({ icon: "error", title, text });
+}
+
+export function showUploadError(message: string) {
+  return showError(message, "No se pudo subir el archivo");
 }
 
 const STUDENT_FIELD_LABELS: Record<string, string> = {
@@ -134,6 +139,7 @@ export async function confirmAction(options: {
   confirmText?: string;
   cancelText?: string;
   icon?: "warning" | "question";
+  confirmButtonColor?: string;
 }): Promise<boolean> {
   const result = await Swal.fire({
     ...modalDefaults,
@@ -143,6 +149,7 @@ export async function confirmAction(options: {
     showCancelButton: true,
     confirmButtonText: options.confirmText ?? "Sí, confirmar",
     cancelButtonText: options.cancelText ?? "Cancelar",
+    confirmButtonColor: options.confirmButtonColor ?? modalDefaults.confirmButtonColor,
     reverseButtons: true,
     focusCancel: true,
   });

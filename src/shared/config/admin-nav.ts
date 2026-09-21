@@ -4,7 +4,7 @@ export interface AdminNavItem {
   label: string;
   href: string;
   description?: string;
-  icon: "dashboard" | "courses" | "students" | "staff" | "companies";
+  icon: "dashboard" | "courses" | "students" | "staff" | "companies" | "subscribers" | "events";
   badge?: string;
   adminOnly?: boolean;
 }
@@ -34,6 +34,12 @@ export const adminNavigation: AdminNavSection[] = [
         description: "Cursos con clases y materiales",
         icon: "courses",
       },
+      {
+        label: "Eventos",
+        href: "/admin/eventos",
+        description: "Tarjetas de la página /eventos",
+        icon: "events",
+      },
     ],
   },
   {
@@ -62,6 +68,17 @@ export const adminNavigation: AdminNavSection[] = [
         href: "/admin/empresas",
         description: "Datos de empleadores y expediente STPS",
         icon: "companies",
+      },
+    ],
+  },
+  {
+    title: "Sitio",
+    items: [
+      {
+        label: "Suscritos",
+        href: "/admin/suscritos",
+        description: "Newsletter y novedades del sitio",
+        icon: "subscribers",
       },
     ],
   },

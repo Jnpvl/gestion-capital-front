@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CourseAssetKind } from "@/core/domain/courses/types";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
-import { UploadApiError, uploadCourseAsset } from "@/infrastructure/http/uploads-api";
-import { showError, showSuccess } from "@/shared/lib/alerts";
+import { UploadApiError, deleteUploadedAsset, uploadCourseAsset } from "@/infrastructure/http/uploads-api";
+import { showSuccess, showUploadError } from "@/shared/lib/alerts";
+import { UPLOAD_LIMITS } from "@/shared/lib/upload-validation";
 import { resolveAssetUrl } from "@/shared/lib/resolve-asset-url";
 
 interface CourseAssetUploadProps {
@@ -17,6 +18,8 @@ interface CourseAssetUploadProps {
   hint?: string;
   accept: string;
   showThumbnail?: boolean;
+  /** When "cover", server persists path to courses.cover_image and can delete the previous cover. */
+  role?: "cover";
 }
 
 export function CourseAssetUpload({
@@ -28,9 +31,15 @@ export function CourseAssetUpload({
   hint,
   accept,
   showThumbnail = true,
+  role,
 }: CourseAssetUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastPathRef = useRef<string | null>(value);
   const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    lastPathRef.current = value;
+  }, [value]);
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -38,31 +47,70 @@ export function CourseAssetUpload({
 
     const token = authStorage.getToken();
     if (!token) {
-      showError("Debes iniciar sesión para subir archivos");
+      showUploadError("Debes iniciar sesión para subir archivos");
       return;
     }
 
     setIsUploading(true);
 
     try {
-      const path = await uploadCourseAsset(token, courseId, file, kind);
+      const previousPath = lastPathRef.current || value;
+      const path = await uploadCourseAsset(token, courseId, file, kind, previousPath, {
+        role,
+      });
+      lastPathRef.current = path;
       onChange(path);
       showSuccess("Archivo subido correctamente");
     } catch (err) {
-      showError(err instanceof UploadApiError ? err.message : "Error al subir el archivo");
+      showUploadError(
+        err instanceof UploadApiError ? err.message : "No se pudo subir el archivo",
+      );
     } finally {
       setIsUploading(false);
       if (inputRef.current) inputRef.current.value = "";
     }
   }
 
+  async function handleRemove() {
+    const token = authStorage.getToken();
+    if (!token) {
+      showUploadError("Debes iniciar sesión para eliminar archivos");
+      return;
+    }
+
+    const previous = (lastPathRef.current || value)?.trim();
+    if (!previous) {
+      onChange("");
+      return;
+    }
+
+    try {
+      await deleteUploadedAsset(token, previous, {
+        role,
+        courseId: role === "cover" ? courseId : undefined,
+      });
+      lastPathRef.current = null;
+      onChange("");
+      showSuccess("Archivo eliminado del servidor.");
+    } catch (err) {
+      showUploadError(
+        err instanceof UploadApiError ? err.message : "No se pudo eliminar el archivo",
+      );
+    }
+  }
+
   const fileName = value?.split("/").pop();
+  const limitHint =
+    kind === "image"
+      ? `Imágenes ${UPLOAD_LIMITS.image.formatsLabel}. Máximo ${UPLOAD_LIMITS.image.maxLabel}.`
+      : `Solo PDF. Máximo ${UPLOAD_LIMITS.pdf.maxLabel}.`;
 
   return (
     <div className="space-y-3">
       <div>
         <p className="text-sm font-medium text-brand-gray">{label}</p>
         {hint && <p className="mt-1 text-xs text-brand-muted">{hint}</p>}
+        <p className="mt-1 text-xs text-brand-muted">{limitHint}</p>
       </div>
 
       {kind === "image" && showThumbnail && value && (
@@ -91,10 +139,7 @@ export function CourseAssetUpload({
         {value && (
           <button
             type="button"
-            onClick={() => {
-              onChange("");
-              showSuccess("Archivo quitado. Recuerda guardar los cambios del curso.");
-            }}
+            onClick={() => void handleRemove()}
             className="text-sm font-medium text-red-600 hover:underline"
           >
             Quitar

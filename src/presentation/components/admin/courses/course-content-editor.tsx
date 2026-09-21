@@ -16,7 +16,44 @@ import {
 import { QuizBlockEditor } from "@/presentation/components/admin/courses/quiz-block-editor";
 import { AssignmentBlockEditor } from "@/presentation/components/admin/courses/assignment-block-editor";
 import { CourseAssetUpload } from "@/presentation/components/admin/courses/course-asset-upload";
+import { authStorage } from "@/infrastructure/auth/auth-storage";
+import { deleteUploadedAsset } from "@/infrastructure/http/uploads-api";
 import { cn } from "@/shared/lib/cn";
+
+const MEDIA_BLOCK_TYPES = new Set<LessonBlockType>([
+  "image",
+  "file",
+  "presentation",
+  "assignment",
+]);
+
+function collectLessonUploadPaths(lesson: Lesson): string[] {
+  return lesson.blocks
+    .map((block) => block.resourceUrl?.trim())
+    .filter((path): path is string => Boolean(path));
+}
+
+function collectSectionUploadPaths(section: CourseSection): string[] {
+  return section.lessons.flatMap(collectLessonUploadPaths);
+}
+
+/** Best-effort delete of managed /uploads files when a block/lesson/section is removed. */
+function purgeUploadPaths(paths: Array<string | null | undefined>) {
+  const token = authStorage.getToken();
+  if (!token) return;
+
+  const unique = [
+    ...new Set(
+      paths
+        .map((path) => path?.trim())
+        .filter((path): path is string => Boolean(path)),
+    ),
+  ];
+
+  for (const path of unique) {
+    void deleteUploadedAsset(token, path).catch(() => undefined);
+  }
+}
 
 interface CourseContentEditorProps {
   courseId: string;
@@ -116,6 +153,8 @@ function LessonEditor({
   }
 
   function removeBlock(blockIndex: number) {
+    const block = lesson.blocks[blockIndex];
+    purgeUploadPaths([block?.resourceUrl]);
     onUpdate({ blocks: lesson.blocks.filter((_, index) => index !== blockIndex) });
   }
 
@@ -174,6 +213,13 @@ function LessonEditor({
                   const switchingToQuiz = type === "quiz" && block.type !== "quiz";
                   const switchingToAssignment =
                     type === "assignment" && block.type !== "assignment";
+                  const leavingMedia =
+                    MEDIA_BLOCK_TYPES.has(block.type) && type !== block.type;
+
+                  if (leavingMedia) {
+                    purgeUploadPaths([block.resourceUrl]);
+                  }
+
                   updateBlock(blockIndex, {
                     type,
                     content: switchingToQuiz
@@ -181,6 +227,7 @@ function LessonEditor({
                       : switchingToAssignment
                         ? serializeAssignmentContent(createEmptyAssignmentContent())
                         : block.content,
+                    ...(leavingMedia ? { resourceUrl: "" } : {}),
                   });
                 }}
                 className="rounded-lg border border-brand-line px-3 py-2 text-sm outline-none focus:border-brand-blue"
@@ -368,6 +415,8 @@ export function CourseContentEditor({
   }
 
   function removeSection(sectionIndex: number) {
+    const section = sections[sectionIndex];
+    if (section) purgeUploadPaths(collectSectionUploadPaths(section));
     setSections((prev) => prev.filter((_, index) => index !== sectionIndex));
   }
 
@@ -397,6 +446,8 @@ export function CourseContentEditor({
   }
 
   function removeLesson(sectionIndex: number, lessonIndex: number) {
+    const lesson = sections[sectionIndex]?.lessons[lessonIndex];
+    if (lesson) purgeUploadPaths(collectLessonUploadPaths(lesson));
     setSections((prev) =>
       prev.map((section, index) =>
         index === sectionIndex

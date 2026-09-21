@@ -1,20 +1,51 @@
 "use client";
 
-import { showSuccess } from "@/shared/lib/alerts";
+import { useState } from "react";
 import Link from "next/link";
+import { SubscribeApiError, subscribeToNewsletter } from "@/infrastructure/http/subscribe-api";
+import { showError, showSuccess } from "@/shared/lib/alerts";
 
 export function SubscribeForm() {
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    showSuccess(
-      "Pronto recibirás novedades sobre eventos y capacitaciones.",
-      "¡Gracias por suscribirte!",
-    );
-    e.currentTarget.reset();
+    const formEl = e.currentTarget;
+    const data = new FormData(formEl);
+
+    setIsSubmitting(true);
+    try {
+      const result = await subscribeToNewsletter({
+        name: String(data.get("nombre") ?? "").trim(),
+        email: String(data.get("email") ?? "").trim(),
+        company: String(data.get("empresa") ?? "").trim() || undefined,
+      });
+
+      if (result.alreadySubscribed) {
+        showSuccess(
+          "Este correo ya estaba registrado para recibir novedades.",
+          "Ya estás suscrito",
+        );
+      } else {
+        showSuccess(
+          "Pronto recibirás novedades sobre eventos y capacitaciones.",
+          "¡Gracias por suscribirte!",
+        );
+      }
+      formEl.reset();
+    } catch (error) {
+      showError(
+        error instanceof SubscribeApiError
+          ? error.message
+          : "No se pudo completar la suscripción. Inténtalo de nuevo.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
       <div>
         <label htmlFor="sub-nombre" className="mb-1.5 block text-sm font-medium text-brand-gray">
           Nombre *
@@ -52,9 +83,10 @@ export function SubscribeForm() {
       </div>
       <button
         type="submit"
-        className="w-full rounded-lg bg-brand-black px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-gray"
+        disabled={isSubmitting}
+        className="w-full rounded-lg bg-brand-black px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-gray disabled:opacity-50"
       >
-        Suscribirme
+        {isSubmitting ? "Suscribiendo..." : "Suscribirme"}
       </button>
       <p className="text-xs leading-relaxed text-brand-muted">
         Al suscribirte aceptas nuestro{" "}

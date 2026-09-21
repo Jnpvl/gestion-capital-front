@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { isElevatedStaffRole } from "@/core/domain/auth/types";
 import type { CourseDetail, CourseSection } from "@/core/domain/courses/types";
 import { countCourseLessons } from "@/core/domain/courses/types";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
@@ -13,6 +14,7 @@ import {
   updateCoursePromotion,
 } from "@/infrastructure/http/courses-api";
 import { showError, showSaved } from "@/shared/lib/alerts";
+import { useAuth } from "@/presentation/providers/auth-provider";
 import { CourseContentEditor } from "@/presentation/components/admin/courses/course-content-editor";
 import { CoursePromotionForm } from "@/presentation/components/admin/courses/course-promotion-form";
 import { CourseTemplatesForm } from "@/presentation/components/admin/courses/course-templates-form";
@@ -34,6 +36,8 @@ type Tab =
 export function CourseEditorContent() {
   const params = useParams<{ id: string }>();
   const courseId = params.id;
+  const { user } = useAuth();
+  const canAssignInstructor = isElevatedStaffRole(user?.role);
 
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [tab, setTab] = useState<Tab>("promotion");
@@ -252,6 +256,7 @@ export function CourseEditorContent() {
             key={course.updatedAt}
             course={course}
             isSaving={isSaving}
+            canAssignInstructor={canAssignInstructor}
             onSave={handleSavePromotion}
           />
         ) : tab === "templates" ? (

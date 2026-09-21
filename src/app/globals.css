@@ -78,3 +78,19 @@ body {
     animation: none;
   }
 }
+
+/* Public site: justify body copy (not headings, nav, or centered UI). */
+.site-prose :where(p, li, dd, blockquote) {
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+.site-prose :where(p, li, dd, blockquote).text-center,
+.site-prose :where(.text-center) :where(p, li, dd, blockquote),
+.site-prose :where(p, li, dd, blockquote).text-left,
+.site-prose :where(p, li, dd, blockquote).text-right {
+  text-align: inherit;
+  hyphens: manual;
+}
