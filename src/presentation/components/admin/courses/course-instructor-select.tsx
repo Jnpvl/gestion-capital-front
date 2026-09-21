@@ -19,6 +19,7 @@ interface CourseInstructorSelectProps {
   hint?: string;
   /** assign: empty = sin asignar. filter: empty = todos, "unassigned" = sin asignar. */
   variant?: "assign" | "filter";
+  className?: string;
   /** Extra classes for the select control (e.g. compact filter). */
   selectClassName?: string;
 }
