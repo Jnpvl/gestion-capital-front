@@ -5,7 +5,8 @@ import type { CreateStaffInput, StaffDetail } from "@/core/domain/staff/types";
 import { StaffApiError } from "@/infrastructure/http/staff-api";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
 import { UploadApiError, uploadStaffSignature } from "@/infrastructure/http/uploads-api";
-import { showError } from "@/shared/lib/alerts";
+import { showError, showUploadError } from "@/shared/lib/alerts";
+import { validateUploadFile } from "@/shared/lib/upload-validation";
 import { generatePassword, PasswordField } from "@/presentation/components/ui/password-field";
 import { StaffPendingSignatureField } from "@/presentation/components/admin/staff/staff-media-upload";
 import {
@@ -93,11 +94,13 @@ export function CreateStaffForm({ onSubmit, onCreated, onCancel }: CreateStaffFo
         password,
       });
     } catch (err) {
-      showError(
-        err instanceof StaffApiError || err instanceof UploadApiError
-          ? err.message
-          : "No se pudo crear el instructor",
-      );
+      if (err instanceof UploadApiError) {
+        showUploadError(err.message);
+      } else {
+        showError(
+          err instanceof StaffApiError ? err.message : "No se pudo crear el instructor",
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -110,7 +113,18 @@ export function CreateStaffForm({ onSubmit, onCreated, onCancel }: CreateStaffFo
       {values.role === "teacher" ? (
         <StaffPendingSignatureField
           file={signatureFile}
-          onChange={setSignatureFile}
+          onChange={(file) => {
+            if (!file) {
+              setSignatureFile(null);
+              return;
+            }
+            const validationError = validateUploadFile(file, "image");
+            if (validationError) {
+              showUploadError(validationError);
+              return;
+            }
+            setSignatureFile(file);
+          }}
           required
         />
       ) : null}

@@ -87,7 +87,7 @@ export const homeContent = {
       items: [
         {
           name: "Proethic",
-          logo: "/images/aliados/proethic.png",
+          logo: "/images/aliados/proethic-logo.png",
           href: "https://www.proethic.com.mx/",
           brandColor: "#046B43",
           description:
@@ -104,7 +104,6 @@ export const homeContent = {
         {
           name: "ASLA",
           logo: "/images/aliados/asla.png",
-          href: "https://www.facebook.com/profile.php?id=61592745845144",
           brandColor: "#1B4F9C",
           description:
             "Seguridad e higiene y asesoría especializada para fortalecer la prevención de riesgos en el trabajo.",

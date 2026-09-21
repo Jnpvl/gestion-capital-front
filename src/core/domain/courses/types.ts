@@ -93,6 +93,8 @@ export interface CourseListItem {
   featured: boolean;
   lessonsCount: number;
   studentsCount: number;
+  instructorId: string | null;
+  instructorName: string | null;
   createdAt: string;
 }
 

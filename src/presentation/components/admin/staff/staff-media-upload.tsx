@@ -5,11 +5,13 @@ import { useRef, useState } from "react";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
 import {
   UploadApiError,
+  deleteUploadedAsset,
   uploadStaffLogo,
   uploadStaffPhoto,
   uploadStaffSignature,
 } from "@/infrastructure/http/uploads-api";
-import { showError, showSuccess } from "@/shared/lib/alerts";
+import { showSuccess, showUploadError } from "@/shared/lib/alerts";
+import { UPLOAD_LIMITS } from "@/shared/lib/upload-validation";
 import { resolveAssetUrl } from "@/shared/lib/resolve-asset-url";
 
 type StaffMediaKind = "photo" | "logo" | "signature";
@@ -31,6 +33,7 @@ const copy: Record<
     change: string;
     success: string;
     error: string;
+    removeSuccess: string;
     alt: string;
     objectFit: "cover" | "contain";
   }
@@ -42,6 +45,7 @@ const copy: Record<
     change: "Cambiar fotografía",
     success: "Fotografía subida correctamente",
     error: "Error al subir la fotografía",
+    removeSuccess: "Fotografía eliminada del servidor.",
     alt: "Fotografía del instructor",
     objectFit: "cover",
   },
@@ -52,6 +56,7 @@ const copy: Record<
     change: "Cambiar logo",
     success: "Logo subido correctamente",
     error: "Error al subir el logo",
+    removeSuccess: "Logo eliminado del servidor.",
     alt: "Logo del instructor",
     objectFit: "contain",
   },
@@ -62,6 +67,7 @@ const copy: Record<
     change: "Cambiar firma",
     success: "Firma subida correctamente",
     error: "Error al subir la firma",
+    removeSuccess: "Firma eliminada del servidor.",
     alt: "Firma del instructor",
     objectFit: "contain",
   },
@@ -84,7 +90,7 @@ export function StaffMediaUpload({
 
     const token = authStorage.getToken();
     if (!token) {
-      showError("Debes iniciar sesión para subir archivos");
+      showUploadError("Debes iniciar sesión para subir archivos");
       return;
     }
 
@@ -93,17 +99,41 @@ export function StaffMediaUpload({
     try {
       const path =
         kind === "logo"
-          ? await uploadStaffLogo(token, staffId, file)
+          ? await uploadStaffLogo(token, staffId, file, value)
           : kind === "signature"
-            ? await uploadStaffSignature(token, staffId, file)
-            : await uploadStaffPhoto(token, staffId, file);
+            ? await uploadStaffSignature(token, staffId, file, value)
+            : await uploadStaffPhoto(token, staffId, file, value);
       onChange(path);
       showSuccess(labels.success);
     } catch (err) {
-      showError(err instanceof UploadApiError ? err.message : labels.error);
+      showUploadError(err instanceof UploadApiError ? err.message : labels.error);
     } finally {
       setIsUploading(false);
       if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  async function handleRemove() {
+    const token = authStorage.getToken();
+    if (!token) {
+      showUploadError("Debes iniciar sesión para eliminar archivos");
+      return;
+    }
+
+    const previous = value?.trim();
+    if (!previous) {
+      onChange("");
+      return;
+    }
+
+    try {
+      await deleteUploadedAsset(token, previous, { role: kind, staffId });
+      onChange("");
+      showSuccess(labels.removeSuccess);
+    } catch (err) {
+      showUploadError(
+        err instanceof UploadApiError ? err.message : "No se pudo eliminar el archivo",
+      );
     }
   }
 
@@ -136,6 +166,15 @@ export function StaffMediaUpload({
         >
           {isUploading ? "Subiendo..." : value ? labels.change : labels.upload}
         </button>
+        {value && (
+          <button
+            type="button"
+            onClick={() => void handleRemove()}
+            className="text-sm font-medium text-red-600 hover:underline"
+          >
+            Quitar
+          </button>
+        )}
         <input
           ref={inputRef}
           type="file"
@@ -146,8 +185,8 @@ export function StaffMediaUpload({
       </div>
       <p className="text-xs text-brand-muted">
         {kind === "signature"
-          ? "Imagen de la firma autógrafa (PNG o JPG). Se usa en constancias y DC-3."
-          : `Se guardará en uploads/images/staff/${folderHint || "nombre-del-instructor"}/`}
+          ? `Imagen de la firma autógrafa (${UPLOAD_LIMITS.image.formatsLabel}). Máximo ${UPLOAD_LIMITS.image.maxLabel}. Se usa en constancias y DC-3.`
+          : `Se guardará en uploads/images/staff/${folderHint || "nombre-del-instructor"}/. Máximo ${UPLOAD_LIMITS.image.maxLabel}.`}
       </p>
     </div>
   );
@@ -192,6 +231,15 @@ export function StaffPendingSignatureField({
         >
           {file ? "Cambiar firma" : "Subir firma"}
         </button>
+        {file && (
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="text-sm font-medium text-red-600 hover:underline"
+          >
+            Quitar
+          </button>
+        )}
         <input
           ref={inputRef}
           type="file"

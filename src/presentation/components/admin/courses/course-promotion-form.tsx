@@ -20,12 +20,14 @@ import {
   normalizeSyllabus,
 } from "@/core/domain/courses/types";
 import { CourseAssetUpload } from "@/presentation/components/admin/courses/course-asset-upload";
+import { CourseInstructorSelect } from "@/presentation/components/admin/courses/course-instructor-select";
 import { CoursePublicView } from "@/presentation/components/courses/course-public-view";
 import { StpsThematicAreaField } from "@/presentation/components/admin/students/stps-thematic-area-field";
 
 interface CoursePromotionFormProps {
   course: CourseDetail;
   isSaving: boolean;
+  canAssignInstructor?: boolean;
   onSave: (data: Record<string, unknown>) => Promise<void>;
 }
 
@@ -36,7 +38,12 @@ function linesToList(value: string): string[] {
     .filter(Boolean);
 }
 
-export function CoursePromotionForm({ course, isSaving, onSave }: CoursePromotionFormProps) {
+export function CoursePromotionForm({
+  course,
+  isSaving,
+  canAssignInstructor = false,
+  onSave,
+}: CoursePromotionFormProps) {
   const [title, setTitle] = useState(course.title);
   const [slug, setSlug] = useState(course.slug);
   const [shortDescription, setShortDescription] = useState(course.shortDescription ?? "");
@@ -47,6 +54,7 @@ export function CoursePromotionForm({ course, isSaving, onSave }: CoursePromotio
   const [level, setLevel] = useState(course.level ?? "");
   const [period, setPeriod] = useState(course.period ?? "");
   const [location, setLocation] = useState(course.location ?? "");
+  const [instructorId, setInstructorId] = useState(course.instructorId ?? "");
   const [highlightsText, setHighlightsText] = useState(course.highlights.join("\n"));
   const [status, setStatus] = useState<CourseStatus>(course.status);
   const [showInCatalog, setShowInCatalog] = useState(course.showInCatalog);
@@ -172,6 +180,7 @@ export function CoursePromotionForm({ course, isSaving, onSave }: CoursePromotio
       syllabus: cleanedSyllabus,
       status,
       showInCatalog,
+      ...(canAssignInstructor ? { instructorId: instructorId || null } : {}),
     });
   }
 
@@ -257,6 +266,7 @@ export function CoursePromotionForm({ course, isSaving, onSave }: CoursePromotio
               kind="image"
               value={coverImage || null}
               onChange={setCoverImage}
+              role="cover"
               label="Imagen de portada"
               hint="Se guardará en uploads/images/cursos/{slug}/ del servidor."
               accept="image/jpeg,image/png,image/webp,image/gif"
@@ -464,6 +474,27 @@ export function CoursePromotionForm({ course, isSaving, onSave }: CoursePromotio
               Información operativa, constancias y DC-3.
             </p>
           </div>
+
+          {canAssignInstructor ? (
+            <CourseInstructorSelect
+              value={instructorId}
+              onChange={setInstructorId}
+              currentInstructor={
+                course.instructorId
+                  ? {
+                      id: course.instructorId,
+                      name: course.instructor?.name ?? "Instructor asignado",
+                    }
+                  : null
+              }
+              disabled={isSaving}
+            />
+          ) : course.instructor?.name ? (
+            <div className="rounded-lg border border-brand-line bg-brand-light/40 px-4 py-3 text-sm text-brand-muted">
+              Instructor:{" "}
+              <span className="font-medium text-brand-gray">{course.instructor.name}</span>
+            </div>
+          ) : null}
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>

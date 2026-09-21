@@ -45,11 +45,20 @@ async function request<T>(path: string, token: string, options?: RequestInit): P
 
 export async function listCourses(
   token: string,
-  params?: { search?: string; status?: "draft" | "published"; page?: number; limit?: number },
+  params?: {
+    search?: string;
+    status?: "draft" | "published";
+    instructorId?: string;
+    unassigned?: boolean;
+    page?: number;
+    limit?: number;
+  },
 ) {
   const query = new URLSearchParams();
   if (params?.search) query.set("search", params.search);
   if (params?.status) query.set("status", params.status);
+  if (params?.instructorId) query.set("instructorId", params.instructorId);
+  if (params?.unassigned) query.set("unassigned", "true");
   if (params?.page) query.set("page", String(params.page));
   if (params?.limit) query.set("limit", String(params.limit));
   const qs = query.toString();
@@ -60,10 +69,23 @@ export async function getCourse(token: string, id: string) {
   return request<{ course: CourseDetail }>(`/${id}`, token);
 }
 
-export async function createCourse(token: string, title: string) {
+export async function createCourse(
+  token: string,
+  title: string,
+  options?: { instructorId?: string | null },
+) {
   return request<{ course: CourseDetail }>("", token, {
     method: "POST",
-    body: JSON.stringify({ title }),
+    body: JSON.stringify({
+      title,
+      instructorId: options?.instructorId ?? undefined,
+    }),
+  });
+}
+
+export async function deleteCourse(token: string, id: string) {
+  return request<{ ok: true; id: string }>(`/${id}`, token, {
+    method: "DELETE",
   });
 }
 
