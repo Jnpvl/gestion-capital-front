@@ -49,12 +49,20 @@ async function request<T>(path: string, token: string, options?: RequestInit): P
 
 export async function listStudents(
   token: string,
-  params?: { search?: string; active?: boolean; alumnoType?: AlumnoType; page?: number; limit?: number },
+  params?: {
+    search?: string;
+    active?: boolean;
+    alumnoType?: AlumnoType;
+    companyId?: string;
+    page?: number;
+    limit?: number;
+  },
 ) {
   const query = new URLSearchParams();
   if (params?.search) query.set("search", params.search);
   if (params?.active !== undefined) query.set("active", String(params.active));
   if (params?.alumnoType) query.set("alumnoType", params.alumnoType);
+  if (params?.companyId) query.set("companyId", params.companyId);
   if (params?.page) query.set("page", String(params.page));
   if (params?.limit) query.set("limit", String(params.limit));
   const qs = query.toString();

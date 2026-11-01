@@ -38,6 +38,8 @@ export interface StudentListItem {
   firstNames?: string;
   email: string;
   phone: string | null;
+  curp?: string | null;
+  currentPosition?: string | null;
   companyName: string | null;
   alumnoType: AlumnoType;
   active: boolean;

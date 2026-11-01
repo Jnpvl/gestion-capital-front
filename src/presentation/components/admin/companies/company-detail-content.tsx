@@ -7,6 +7,7 @@ import { authStorage } from "@/infrastructure/auth/auth-storage";
 import { CompaniesApiError, getCompany } from "@/infrastructure/http/companies-api";
 import { showError } from "@/shared/lib/alerts";
 import { CompanyEditForm } from "@/presentation/components/admin/companies/company-edit-form";
+import { CompanyEmployeesSection } from "@/presentation/components/admin/companies/company-employees-section";
 
 interface CompanyDetailContentProps {
   companyId: string;
@@ -108,6 +109,8 @@ export function CompanyDetailContent({ companyId }: CompanyDetailContentProps) {
           </div>
         </div>
       </div>
+
+      <CompanyEmployeesSection companyId={company.id} />
     </div>
   );
 }
