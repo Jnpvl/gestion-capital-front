@@ -63,6 +63,8 @@ export function CompanyDetailContent({ companyId }: CompanyDetailContentProps) {
         </p>
       </div>
 
+      <CompanyEmployeesSection companyId={company.id} />
+
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="rounded-2xl border border-brand-line bg-white p-6 lg:col-span-1">
           <h2 className="font-display text-lg font-bold text-brand-gray">Resumen</h2>
@@ -109,8 +111,6 @@ export function CompanyDetailContent({ companyId }: CompanyDetailContentProps) {
           </div>
         </div>
       </div>
-
-      <CompanyEmployeesSection companyId={company.id} />
     </div>
   );
 }
