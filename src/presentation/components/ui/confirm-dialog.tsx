@@ -25,13 +25,8 @@ export function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button
-        type="button"
-        aria-label="Cerrar"
-        onClick={onCancel}
-        disabled={isLoading}
-        className="absolute inset-0 bg-brand-gray/40"
-      />
+      {/* Fondo: no cierra el modal (solo los botones de cerrar). */}
+      <div aria-hidden className="absolute inset-0 bg-brand-gray/40" />
       <div
         role="alertdialog"
         aria-modal="true"

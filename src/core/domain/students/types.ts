@@ -38,11 +38,15 @@ export interface StudentListItem {
   firstNames?: string;
   email: string;
   phone: string | null;
+  curp?: string | null;
+  currentPosition?: string | null;
   companyName: string | null;
   alumnoType: AlumnoType;
   active: boolean;
   coursesCount: number;
   createdAt: string;
+  /** Último envío del correo de accesos desde el admin. */
+  accessEmailSentAt?: string | null;
 }
 
 export interface StudentDetail {

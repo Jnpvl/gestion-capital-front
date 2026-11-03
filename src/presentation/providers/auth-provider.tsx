@@ -83,4 +83,9 @@ export function useAuth() {
   return context;
 }
 
+/** Igual que useAuth, pero devuelve null fuera de AuthProvider (p. ej. portal de empresa). */
+export function useOptionalAuth() {
+  return useContext(AuthContext);
+}
+
 export { ApiClientError };

@@ -4,7 +4,7 @@ export interface AdminNavItem {
   label: string;
   href: string;
   description?: string;
-  icon: "dashboard" | "courses" | "students" | "staff" | "companies" | "subscribers" | "events";
+  icon: "dashboard" | "courses" | "students" | "staff" | "companies" | "subscribers" | "events" | "forms";
   badge?: string;
   adminOnly?: boolean;
 }
@@ -68,6 +68,12 @@ export const adminNavigation: AdminNavSection[] = [
         href: "/admin/empresas",
         description: "Datos de empleadores y expediente STPS",
         icon: "companies",
+      },
+      {
+        label: "Formularios",
+        href: "/admin/formularios",
+        description: "Cuestionarios NOM-035",
+        icon: "forms",
       },
     ],
   },

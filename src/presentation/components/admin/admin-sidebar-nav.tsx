@@ -3,21 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AdminNavIcon } from "@/presentation/components/admin/admin-nav-icon";
-import { getAdminNavigation } from "@/shared/config/admin-nav";
-import { useAuth } from "@/presentation/providers/auth-provider";
+import { getAdminNavigation, type AdminNavSection } from "@/shared/config/admin-nav";
+import { useOptionalAuth } from "@/presentation/providers/auth-provider";
 import { cn } from "@/shared/lib/cn";
 
-function isActive(pathname: string, href: string) {
-  if (href === "/admin") {
-    return pathname === "/admin";
+function isActive(pathname: string, href: string, rootHref: string) {
+  if (href === rootHref) {
+    return pathname === rootHref;
   }
   return pathname.startsWith(href);
 }
 
-export function AdminSidebarNav() {
+/** Por defecto, el menú admin; el portal de empresa pasa su propio menú y raíz. */
+export function AdminSidebarNav({
+  navigation: customNavigation,
+  rootHref = "/admin",
+}: { navigation?: AdminNavSection[]; rootHref?: string } = {}) {
   const pathname = usePathname();
-  const { user } = useAuth();
-  const navigation = getAdminNavigation(user?.role ?? "teacher");
+  const user = useOptionalAuth()?.user;
+  const navigation = customNavigation ?? getAdminNavigation(user?.role ?? "teacher");
 
   return (
     <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-6">
@@ -28,7 +32,7 @@ export function AdminSidebarNav() {
           </p>
           <ul className="space-y-1">
             {section.items.map((item) => {
-              const active = isActive(pathname, item.href);
+              const active = isActive(pathname, item.href, rootHref);
               return (
                 <li key={item.href}>
                   <Link

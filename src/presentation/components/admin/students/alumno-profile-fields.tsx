@@ -47,6 +47,8 @@ interface AlumnoProfileFieldsProps {
     value: AlumnoProfileFormValues[K],
   ) => void;
   showNotes?: boolean;
+  /** When set, the company is fixed (e.g. creating an employee from a company page). */
+  lockedCompany?: { id: string; name: string; rfc: string | null };
 }
 
 function Section({
@@ -61,8 +63,12 @@ function Section({
   return (
     <div className="space-y-4 rounded-2xl border border-brand-line bg-white p-5">
       <div>
-        <h3 className="font-display text-base font-bold text-brand-gray">{title}</h3>
-        {description && <p className="mt-1 text-sm text-brand-muted">{description}</p>}
+        <h3 className="font-display text-base font-bold text-brand-gray">
+          {title}
+        </h3>
+        {description && (
+          <p className="mt-1 text-sm text-brand-muted">{description}</p>
+        )}
       </div>
       {children}
     </div>
@@ -76,6 +82,7 @@ export function AlumnoProfileFields({
   values,
   onChange,
   showNotes = true,
+  lockedCompany,
 }: AlumnoProfileFieldsProps) {
   const showLaborDetails = values.currentlyEmployed === "yes";
 
@@ -87,9 +94,11 @@ export function AlumnoProfileFields({
       onChange("industrySector", "");
       onChange("yearsExperience", "");
       onChange("timeInCurrentPosition", "");
-      onChange("companyId", null);
-      onChange("companyName", "");
-      onChange("companyRfc", "");
+      if (!lockedCompany) {
+        onChange("companyId", null);
+        onChange("companyName", "");
+        onChange("companyRfc", "");
+      }
       onChange("stpsOccupationCode", "");
       onChange("stpsOccupationLabel", "");
     }
@@ -124,7 +133,9 @@ export function AlumnoProfileFields({
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium text-brand-gray">Nombre(s) *</label>
+            <label className="mb-1.5 block text-sm font-medium text-brand-gray">
+              Nombre(s) *
+            </label>
             <input
               value={values.firstNames}
               onChange={(e) => onChange("firstNames", e.target.value)}
@@ -133,7 +144,9 @@ export function AlumnoProfileFields({
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-brand-gray">CURP *</label>
+            <label className="mb-1.5 block text-sm font-medium text-brand-gray">
+              CURP *
+            </label>
             <input
               value={values.curp}
               onChange={(e) => onChange("curp", e.target.value.toUpperCase())}
@@ -143,10 +156,14 @@ export function AlumnoProfileFields({
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-brand-gray">Sexo *</label>
+            <label className="mb-1.5 block text-sm font-medium text-brand-gray">
+              Sexo *
+            </label>
             <select
               value={values.gender}
-              onChange={(e) => onChange("gender", e.target.value as AlumnoGender | "")}
+              onChange={(e) =>
+                onChange("gender", e.target.value as AlumnoGender | "")
+              }
               required
               className={inputClass}
             >
@@ -159,7 +176,9 @@ export function AlumnoProfileFields({
             </select>
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-brand-gray">Edad *</label>
+            <label className="mb-1.5 block text-sm font-medium text-brand-gray">
+              Edad *
+            </label>
             <input
               type="number"
               min={1}
@@ -183,7 +202,9 @@ export function AlumnoProfileFields({
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-brand-gray">Teléfono *</label>
+            <label className="mb-1.5 block text-sm font-medium text-brand-gray">
+              Teléfono *
+            </label>
             <input
               value={values.phone}
               onChange={(e) => onChange("phone", e.target.value)}
@@ -206,7 +227,10 @@ export function AlumnoProfileFields({
         </div>
       </Section>
 
-      <Section title="Formación académica" description="Todos los campos son opcionales.">
+      <Section
+        title="Formación académica"
+        description="Todos los campos son opcionales."
+      >
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="mb-1.5 block text-sm font-medium text-brand-gray">
@@ -214,7 +238,12 @@ export function AlumnoProfileFields({
             </label>
             <select
               value={values.educationLevel}
-              onChange={(e) => onChange("educationLevel", e.target.value as EducationLevel | "")}
+              onChange={(e) =>
+                onChange(
+                  "educationLevel",
+                  e.target.value as EducationLevel | "",
+                )
+              }
               className={inputClass}
             >
               <option value="">Sin especificar</option>
@@ -248,7 +277,10 @@ export function AlumnoProfileFields({
         </div>
       </Section>
 
-      <Section title="Información laboral" description="Todos los campos son opcionales.">
+      <Section
+        title="Información laboral"
+        description="Todos los campos son opcionales."
+      >
         <div className="grid gap-4 sm:grid-cols-2">
           <div className={showLaborDetails ? "" : "sm:col-span-2"}>
             <label className="mb-1.5 block text-sm font-medium text-brand-gray">
@@ -256,7 +288,9 @@ export function AlumnoProfileFields({
             </label>
             <select
               value={values.currentlyEmployed}
-              onChange={(e) => setCurrentlyEmployed(e.target.value as "" | "yes" | "no")}
+              onChange={(e) =>
+                setCurrentlyEmployed(e.target.value as "" | "yes" | "no")
+              }
               className={inputClass}
             >
               <option value="">Sin especificar</option>
@@ -272,7 +306,9 @@ export function AlumnoProfileFields({
                 </label>
                 <select
                   value={values.jobType}
-                  onChange={(e) => onChange("jobType", e.target.value as JobType | "")}
+                  onChange={(e) =>
+                    onChange("jobType", e.target.value as JobType | "")
+                  }
                   className={inputClass}
                 >
                   <option value="">Sin especificar</option>
@@ -284,16 +320,28 @@ export function AlumnoProfileFields({
                 </select>
               </div>
               <div className="sm:col-span-2">
-                <CompanySelectField
-                  value={values.companyId}
-                  selectedLabel={values.companyName}
-                  selectedRfc={values.companyRfc}
-                  onChange={(id, company) => {
-                    onChange("companyId", id);
-                    onChange("companyName", company?.name ?? "");
-                    onChange("companyRfc", company?.rfc ?? "");
-                  }}
-                />
+                {lockedCompany ? (
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-brand-gray">
+                      Empresa
+                    </label>
+                    <div className="rounded-lg border border-brand-line bg-brand-light/60 px-4 py-2.5 text-sm text-brand-gray">
+                      {lockedCompany.name}
+                      {lockedCompany.rfc ? ` · ${lockedCompany.rfc}` : ""}
+                    </div>
+                  </div>
+                ) : (
+                  <CompanySelectField
+                    value={values.companyId}
+                    selectedLabel={values.companyName}
+                    selectedRfc={values.companyRfc}
+                    onChange={(id, company) => {
+                      onChange("companyId", id);
+                      onChange("companyName", company?.name ?? "");
+                      onChange("companyRfc", company?.rfc ?? "");
+                    }}
+                  />
+                )}
               </div>
               <div className="sm:col-span-2">
                 <StpsCatalogField
@@ -345,7 +393,9 @@ export function AlumnoProfileFields({
                 </label>
                 <input
                   value={values.timeInCurrentPosition}
-                  onChange={(e) => onChange("timeInCurrentPosition", e.target.value)}
+                  onChange={(e) =>
+                    onChange("timeInCurrentPosition", e.target.value)
+                  }
                   placeholder="Ej. 2 años, 6 meses"
                   className={inputClass}
                 />
@@ -454,14 +504,19 @@ export function profileValuesFromStudent(student: {
     jobType: student.jobType ?? "",
     currentPosition: student.currentPosition ?? "",
     industrySector: student.industrySector ?? "",
-    yearsExperience: student.yearsExperience != null ? String(student.yearsExperience) : "",
+    yearsExperience:
+      student.yearsExperience != null ? String(student.yearsExperience) : "",
     timeInCurrentPosition: student.timeInCurrentPosition ?? "",
     companyId: student.currentlyEmployed ? student.companyId : null,
     companyName: student.currentlyEmployed ? (student.companyName ?? "") : "",
     companyRfc: student.currentlyEmployed ? (student.companyRfc ?? "") : "",
-    stpsOccupationCode: student.currentlyEmployed ? (student.stpsOccupationCode ?? "") : "",
+    stpsOccupationCode: student.currentlyEmployed
+      ? (student.stpsOccupationCode ?? "")
+      : "",
     stpsOccupationLabel:
-      student.currentlyEmployed && student.stpsOccupationCode && student.stpsOccupationName
+      student.currentlyEmployed &&
+      student.stpsOccupationCode &&
+      student.stpsOccupationName
         ? `${student.stpsOccupationCode} — ${student.stpsOccupationName}`
         : "",
     notes: student.notes ?? "",
@@ -490,8 +545,13 @@ export function profileValuesToPayload(values: AlumnoProfileFormValues) {
     jobType: employed ? values.jobType || null : null,
     currentPosition: employed ? values.currentPosition.trim() || null : null,
     industrySector: employed ? values.industrySector.trim() || null : null,
-    yearsExperience: employed && values.yearsExperience ? Number(values.yearsExperience) : null,
-    timeInCurrentPosition: employed ? values.timeInCurrentPosition.trim() || null : null,
+    yearsExperience:
+      employed && values.yearsExperience
+        ? Number(values.yearsExperience)
+        : null,
+    timeInCurrentPosition: employed
+      ? values.timeInCurrentPosition.trim() || null
+      : null,
     companyId: employed ? values.companyId : null,
     stpsOccupationCode: employed ? values.stpsOccupationCode || null : null,
     notes: values.notes.trim() || null,

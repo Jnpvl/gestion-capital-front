@@ -6,7 +6,7 @@ import type {
   UpdateStudentInput,
 } from "@/core/domain/students/types";
 import type { AlumnoType } from "@/core/domain/students/alumno-types";
-import type { ApiErrorBody } from "@/core/domain/auth/types";
+import type { ApiErrorBody, ApiFieldError } from "@/core/domain/auth/types";
 import { env } from "@/shared/config/env";
 
 class StudentsApiError extends Error {
@@ -15,6 +15,7 @@ class StudentsApiError extends Error {
     public readonly status: number,
     public readonly code?: string,
     public readonly details?: Record<string, string[] | undefined>,
+    public readonly fields: ApiFieldError[] = [],
   ) {
     super(message);
     this.name = "StudentsApiError";
@@ -41,6 +42,7 @@ async function request<T>(path: string, token: string, options?: RequestInit): P
       response.status,
       error?.error?.code,
       error?.error?.details,
+      error?.error?.fields ?? [],
     );
   }
 
@@ -49,12 +51,20 @@ async function request<T>(path: string, token: string, options?: RequestInit): P
 
 export async function listStudents(
   token: string,
-  params?: { search?: string; active?: boolean; alumnoType?: AlumnoType; page?: number; limit?: number },
+  params?: {
+    search?: string;
+    active?: boolean;
+    alumnoType?: AlumnoType;
+    companyId?: string;
+    page?: number;
+    limit?: number;
+  },
 ) {
   const query = new URLSearchParams();
   if (params?.search) query.set("search", params.search);
   if (params?.active !== undefined) query.set("active", String(params.active));
   if (params?.alumnoType) query.set("alumnoType", params.alumnoType);
+  if (params?.companyId) query.set("companyId", params.companyId);
   if (params?.page) query.set("page", String(params.page));
   if (params?.limit) query.set("limit", String(params.limit));
   const qs = query.toString();

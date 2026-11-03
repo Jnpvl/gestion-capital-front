@@ -27,5 +27,13 @@ export interface ApiErrorBody {
     message?: string;
     code?: string;
     details?: Record<string, string[] | undefined>;
+    /** Errores por campo: { field, label, message } (validación y duplicados). */
+    fields?: ApiFieldError[];
   };
+}
+
+export interface ApiFieldError {
+  field: string;
+  label: string;
+  message: string;
 }

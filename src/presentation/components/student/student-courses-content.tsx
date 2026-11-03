@@ -10,6 +10,7 @@ import { listStudentCourses } from "@/infrastructure/http/student-courses-api";
 import { downloadCourseCertificate, downloadCourseDc3 } from "@/infrastructure/http/student-certificate-api";
 import { showError, showSuccess } from "@/shared/lib/alerts";
 import { resolveAssetUrl } from "@/shared/lib/resolve-asset-url";
+import { StudentPendingForms } from "@/presentation/components/student/student-pending-forms";
 
 export function StudentCoursesContent() {
   const [courses, setCourses] = useState<StudentCourseListItem[]>([]);
@@ -86,6 +87,8 @@ export function StudentCoursesContent() {
           Accede al contenido de los cursos que tienes asignados.
         </p>
       </div>
+
+      <StudentPendingForms />
 
       {courses.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-brand-line bg-white px-6 py-12 text-center">
