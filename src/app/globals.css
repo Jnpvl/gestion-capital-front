@@ -94,3 +94,15 @@ body {
   text-align: inherit;
   hyphens: manual;
 }
+
+/* Aparición suave de secciones condicionales en formularios NOM-035. */
+@keyframes form-section-reveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.form-section-reveal {
+  animation: form-section-reveal 180ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .form-section-reveal { animation: none; }
+}

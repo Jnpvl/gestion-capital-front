@@ -2,26 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { getAdminNavigation } from "@/shared/config/admin-nav";
-import { useAuth } from "@/presentation/providers/auth-provider";
+import { getAdminNavigation, type AdminNavSection } from "@/shared/config/admin-nav";
+import { useOptionalAuth } from "@/presentation/providers/auth-provider";
 import { cn } from "@/shared/lib/cn";
 
-function isActive(pathname: string, href: string) {
-  if (href === "/admin") {
-    return pathname === "/admin";
+function isActive(pathname: string, href: string, rootHref: string) {
+  if (href === rootHref) {
+    return pathname === rootHref;
   }
   return pathname.startsWith(href);
 }
 
-export function AdminMobileNav() {
+/** Por defecto, el menú admin; el portal de empresa pasa su propio menú y raíz. */
+export function AdminMobileNav({
+  navigation: customNavigation,
+  rootHref = "/admin",
+}: { navigation?: AdminNavSection[]; rootHref?: string } = {}) {
   const pathname = usePathname();
-  const { user } = useAuth();
-  const items = getAdminNavigation(user?.role ?? "teacher").flatMap((section) => section.items);
+  const user = useOptionalAuth()?.user;
+  const items = (customNavigation ?? getAdminNavigation(user?.role ?? "teacher")).flatMap((section) => section.items);
 
   return (
     <div className="flex gap-2 overflow-x-auto pb-1">
       {items.map((item) => {
-        const active = isActive(pathname, item.href);
+        const active = isActive(pathname, item.href, rootHref);
         return (
           <Link
             key={item.href}

@@ -45,6 +45,8 @@ export interface StudentListItem {
   active: boolean;
   coursesCount: number;
   createdAt: string;
+  /** Último envío del correo de accesos desde el admin. */
+  accessEmailSentAt?: string | null;
 }
 
 export interface StudentDetail {

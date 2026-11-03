@@ -5,8 +5,15 @@ import type { AlumnoType } from "@/core/domain/students/alumno-types";
 import { ALUMNO_TYPE_OPTIONS } from "@/core/domain/students/alumno-types";
 import type { CreateStudentInput } from "@/core/domain/students/types";
 import { StudentsApiError } from "@/infrastructure/http/students-api";
-import { showError, showValidationError, showWarning } from "@/shared/lib/alerts";
-import { generatePassword, PasswordField } from "@/presentation/components/ui/password-field";
+import {
+  showError,
+  showValidationError,
+  showWarning,
+} from "@/shared/lib/alerts";
+import {
+  generatePassword,
+  PasswordField,
+} from "@/presentation/components/ui/password-field";
 import {
   AlumnoProfileFields,
   emptyAlumnoProfileValues,
@@ -16,15 +23,38 @@ import {
 interface CreateStudentFormProps {
   onSubmit: (input: CreateStudentInput) => Promise<void>;
   onCancel: () => void;
+  /** Preset and lock company + type "trabajador" (alta desde empresa). */
+  fixedCompany?: { id: string; name: string; rfc: string | null };
+  submitLabel?: string;
 }
 
-export function CreateStudentForm({ onSubmit, onCancel }: CreateStudentFormProps) {
-  const [alumnoType, setAlumnoType] = useState<AlumnoType>("particular");
-  const [values, setValues] = useState(emptyAlumnoProfileValues);
+export function CreateStudentForm({
+  onSubmit,
+  onCancel,
+  fixedCompany,
+  submitLabel = "Crear alumno",
+}: CreateStudentFormProps) {
+  const [alumnoType, setAlumnoType] = useState<AlumnoType>(
+    fixedCompany ? "trabajador" : "particular",
+  );
+  const [values, setValues] = useState(() =>
+    fixedCompany
+      ? {
+          ...emptyAlumnoProfileValues(),
+          currentlyEmployed: "yes" as const,
+          companyId: fixedCompany.id,
+          companyName: fixedCompany.name,
+          companyRfc: fixedCompany.rfc ?? "",
+        }
+      : emptyAlumnoProfileValues(),
+  );
   const [password, setPassword] = useState(generatePassword());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function updateField<K extends keyof typeof values>(field: K, value: (typeof values)[K]) {
+  function updateField<K extends keyof typeof values>(
+    field: K,
+    value: (typeof values)[K],
+  ) {
     setValues((current) => ({ ...current, [field]: value }));
   }
 
@@ -50,13 +80,18 @@ export function CreateStudentForm({ onSubmit, onCancel }: CreateStudentFormProps
         password,
         alumnoType,
         active: true,
+        ...(fixedCompany ? { companyId: fixedCompany.id } : {}),
       });
     } catch (err) {
       if (err instanceof StudentsApiError && err.code === "VALIDATION_ERROR") {
-        await showValidationError(err.details, err.message);
+        await showValidationError(err.details, err.message, err.fields);
         return;
       }
-      showError(err instanceof StudentsApiError ? err.message : "No se pudo crear el alumno");
+      showError(
+        err instanceof StudentsApiError
+          ? err.message
+          : "No se pudo crear el alumno",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -64,25 +99,34 @@ export function CreateStudentForm({ onSubmit, onCancel }: CreateStudentFormProps
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-brand-gray">Tipo de alumno</label>
-        <select
-          value={alumnoType}
-          onChange={(e) => setAlumnoType(e.target.value as AlumnoType)}
-          className="w-full max-w-sm rounded-lg border border-brand-line bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-blue"
-        >
-          {ALUMNO_TYPE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <p className="mt-1.5 text-xs text-brand-muted">
-          Solo para clasificación interna. No afecta los campos del formulario.
-        </p>
-      </div>
+      {!fixedCompany && (
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-brand-gray">
+            Tipo de alumno
+          </label>
+          <select
+            value={alumnoType}
+            onChange={(e) => setAlumnoType(e.target.value as AlumnoType)}
+            className="w-full max-w-sm rounded-lg border border-brand-line bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-blue"
+          >
+            {ALUMNO_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1.5 text-xs text-brand-muted">
+            Solo para clasificación interna. No afecta los campos del
+            formulario.
+          </p>
+        </div>
+      )}
 
-      <AlumnoProfileFields values={values} onChange={updateField} />
+      <AlumnoProfileFields
+        values={values}
+        onChange={updateField}
+        lockedCompany={fixedCompany}
+      />
 
       <div className="rounded-2xl border border-brand-line bg-white p-5">
         <label className="mb-1.5 block text-sm font-medium text-brand-gray">
@@ -114,7 +158,7 @@ export function CreateStudentForm({ onSubmit, onCancel }: CreateStudentFormProps
           disabled={isSubmitting}
           className="rounded-lg bg-brand-black px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-gray disabled:opacity-60"
         >
-          {isSubmitting ? "Creando..." : "Crear alumno"}
+          {isSubmitting ? "Creando..." : submitLabel}
         </button>
       </div>
     </form>

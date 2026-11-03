@@ -61,6 +61,9 @@ export function SiteHeader() {
             <ButtonLink href="/mis-cursos/login" variant="primary" size="sm">
               Ingresar a mis cursos
             </ButtonLink>
+            <ButtonLink href="/empresa/login" variant="outline" size="sm">
+              ¿Eres empresa?
+            </ButtonLink>
             <ButtonLink href="/contacto" variant="gold" size="sm">
               Contactar
             </ButtonLink>
@@ -107,6 +110,9 @@ export function SiteHeader() {
               <li className="pt-2 space-y-2">
                 <ButtonLink href="/mis-cursos/login" variant="primary" className="w-full">
                   Ingresar a mis cursos
+                </ButtonLink>
+                <ButtonLink href="/empresa/login" variant="outline" className="w-full">
+                  ¿Eres empresa?
                 </ButtonLink>
                 <ButtonLink href="/contacto" variant="gold" className="w-full">
                   Contactar

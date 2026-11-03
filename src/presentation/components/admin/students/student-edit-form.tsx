@@ -62,7 +62,7 @@ export function StudentEditForm({ student, onUpdated }: StudentEditFormProps) {
       showSaved();
     } catch (err) {
       if (err instanceof StudentsApiError && err.code === "VALIDATION_ERROR") {
-        await showValidationError(err.details, err.message);
+        await showValidationError(err.details, err.message, err.fields);
         return;
       }
       showError(err instanceof StudentsApiError ? err.message : "No se pudo guardar el alumno");

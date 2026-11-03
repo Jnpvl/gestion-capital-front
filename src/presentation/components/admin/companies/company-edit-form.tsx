@@ -21,12 +21,16 @@ function toFormValues(company: CompanyDetail): CompanyProfileFormValues {
     rfc: company.rfc ?? "",
     employerRepresentative: company.employerRepresentative ?? "",
     workersRepresentative: company.workersRepresentative ?? "",
+    workersCount: company.workersCount != null ? String(company.workersCount) : "",
   };
 }
 
 export function CompanyEditForm({ company, onUpdated }: CompanyEditFormProps) {
   const [values, setValues] = useState<CompanyProfileFormValues>(() => toFormValues(company));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<keyof CompanyProfileFormValues, string>>
+  >({});
 
   useEffect(() => {
     setValues(toFormValues(company));
@@ -37,6 +41,7 @@ export function CompanyEditForm({ company, onUpdated }: CompanyEditFormProps) {
     value: CompanyProfileFormValues[K],
   ) {
     setValues((current) => ({ ...current, [field]: value }));
+    setFieldErrors((current) => ({ ...current, [field]: undefined }));
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -46,12 +51,14 @@ export function CompanyEditForm({ company, onUpdated }: CompanyEditFormProps) {
     if (!token) return;
 
     setIsSubmitting(true);
+    setFieldErrors({});
 
     const payload: UpdateCompanyInput = {
       name: values.name.trim(),
       rfc: values.rfc.trim() || null,
       employerRepresentative: values.employerRepresentative.trim() || null,
       workersRepresentative: values.workersRepresentative.trim() || null,
+      workersCount: values.workersCount ? Number(values.workersCount) : null,
     };
 
     try {
@@ -59,6 +66,13 @@ export function CompanyEditForm({ company, onUpdated }: CompanyEditFormProps) {
       onUpdated(updated);
       showSuccess("Empresa actualizada");
     } catch (err) {
+      if (err instanceof CompaniesApiError && err.fields.length > 0) {
+        const next: Partial<Record<keyof CompanyProfileFormValues, string>> = {};
+        for (const f of err.fields) {
+          if (f.field in values) next[f.field as keyof CompanyProfileFormValues] = f.message;
+        }
+        setFieldErrors(next);
+      }
       showError(err instanceof CompaniesApiError ? err.message : "No se pudo actualizar la empresa");
     } finally {
       setIsSubmitting(false);
@@ -67,7 +81,7 @@ export function CompanyEditForm({ company, onUpdated }: CompanyEditFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <CompanyProfileFields values={values} onChange={updateField} />
+      <CompanyProfileFields values={values} onChange={updateField} errors={fieldErrors} />
 
       <div className="flex flex-wrap items-center gap-3 pt-2">
         <button

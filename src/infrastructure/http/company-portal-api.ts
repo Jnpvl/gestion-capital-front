@@ -1,0 +1,72 @@
+import type { ApiErrorBody } from "@/core/domain/auth/types";
+import type { CompanyDetail } from "@/core/domain/companies/types";
+import type {
+  CompanyDashboardResponse,
+  EmployeeFormDetail,
+  EmployeesFormsSummaryResponse,
+  FormDefinition,
+  FormKey,
+} from "@/core/domain/forms/types";
+import type { StudentsListResponse } from "@/core/domain/students/types";
+import { companyAuthStorage } from "@/infrastructure/auth/company-auth-storage";
+import { env } from "@/shared/config/env";
+
+/**
+ * Portal de empresa (solo lectura). Usa el token de empresa; la empresa sale del token
+ * en el back, por eso ningún endpoint recibe companyId.
+ */
+export class CompanyPortalApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "CompanyPortalApiError";
+  }
+}
+
+async function get<T>(path: string): Promise<T> {
+  const token = companyAuthStorage.getToken();
+  if (!token) throw new CompanyPortalApiError("No hay sesión activa", 401);
+  const response = await fetch(`${env.apiUrl}/api/company${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error = data as ApiErrorBody | null;
+    throw new CompanyPortalApiError(error?.error?.message ?? "Error en la solicitud", response.status);
+  }
+  return data as T;
+}
+
+export type PortalCompany = Omit<CompanyDetail, "accessEmail" | "hasAccess" | "lastLoginAt">;
+
+export function getPortalCompany() {
+  return get<{ company: PortalCompany }>("/profile");
+}
+
+export function listPortalEmployees(params: { search?: string; page?: number; limit?: number }) {
+  const qs = new URLSearchParams();
+  if (params.search) qs.set("search", params.search);
+  if (params.page) qs.set("page", String(params.page));
+  if (params.limit) qs.set("limit", String(params.limit));
+  return get<StudentsListResponse>(`/employees?${qs.toString()}`);
+}
+
+export function getPortalEmployeesFormsSummary(studentIds: string[]) {
+  const qs = studentIds.length ? `?studentIds=${encodeURIComponent(studentIds.join(","))}` : "";
+  return get<EmployeesFormsSummaryResponse>(`/employees/forms-summary${qs}`);
+}
+
+export function getPortalEmployeeFormDetail(studentId: string, formKey: FormKey) {
+  return get<EmployeeFormDetail>(`/employees/${studentId}/forms/${formKey}`);
+}
+
+export function getPortalForm(key: string) {
+  return get<{ form: FormDefinition }>(`/forms/${key}`);
+}
+
+export function getPortalFormResults() {
+  return get<CompanyDashboardResponse>("/forms/results");
+}

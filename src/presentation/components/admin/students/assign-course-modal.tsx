@@ -155,12 +155,8 @@ export function AssignCourseModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button
-        type="button"
-        aria-label="Cerrar"
-        onClick={onClose}
-        className="absolute inset-0 bg-brand-gray/40"
-      />
+      {/* Fondo: no cierra el modal (solo los botones de cerrar). */}
+      <div aria-hidden className="absolute inset-0 bg-brand-gray/40" />
       <div className="relative w-full max-w-lg rounded-2xl border border-brand-line bg-white p-6 shadow-xl">
         <h2 className="font-display text-lg font-bold text-brand-gray">Asignar curso</h2>
         <p className="mt-2 text-sm text-brand-muted">
