@@ -45,6 +45,22 @@ function answerLabel(form: FormDefinition, q: FormQuestion, value: string | unde
   return optionsFor(form, q).find((o) => o.value === value)?.label ?? value;
 }
 
+/** Usa los reactivos positivos de la definición que también califica el backend. */
+function answerPoints(form: FormDefinition, question: FormQuestion, value: string | undefined): number | null {
+  if ((form.key !== "nom035_guia2" && form.key !== "nom035_guia3") ||
+      !form.scoring || question.number == null || !value || question.kind === "yesno") return null;
+  const positivePoints: Record<string, number> = {
+    siempre: 0,
+    casi_siempre: 1,
+    algunas_veces: 2,
+    casi_nunca: 3,
+    nunca: 4,
+  };
+  if (!Object.hasOwn(positivePoints, value)) return null;
+  const points = positivePoints[value];
+  return form.scoring.positiveItems.includes(question.number) ? points : 4 - points;
+}
+
 function formatDateTime(value: string | null | undefined): string {
   if (!value) return "—";
   const d = new Date(value);
@@ -260,8 +276,20 @@ export function EmployeeFormPreviewModal({
                             {q.number != null ? `${q.number}. ` : ""}
                             {q.text}
                           </dt>
-                          <dd className="font-medium text-brand-gray">
-                            {answerLabel(form, q, detail.answers[q.id])}
+                          <dd className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 font-medium text-brand-gray">
+                            <span>{answerLabel(form, q, detail.answers[q.id])}</span>
+                            {!readOnly && answerPoints(form, q, detail.answers[q.id]) != null && (
+                              <span
+                                className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-brand-blue/10 bg-brand-blue/5 px-2.5 py-1"
+                                aria-label={`Puntaje: ${answerPoints(form, q, detail.answers[q.id])} de 4`}
+                              >
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-brand-blue/70">Puntaje</span>
+                                <span className="text-sm font-bold tabular-nums text-brand-blue">
+                                  {answerPoints(form, q, detail.answers[q.id])}
+                                  <span className="ml-1 text-[11px] font-normal text-brand-muted">/ 4</span>
+                                </span>
+                              </span>
+                            )}
                           </dd>
                         </div>
                       ))}

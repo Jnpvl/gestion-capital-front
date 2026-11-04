@@ -281,7 +281,18 @@ export interface DashboardEmployee {
   forms: Record<FormKey, DashboardFormCell>;
 }
 
+export type DemographicRiskGuide = "nom035_guia2" | "nom035_guia3";
+export type DemographicRiskCounts = Record<RiskLevel | "sin_resultado", number>;
+export interface DashboardDemographics {
+  riskGuides?: DemographicRiskGuide[];
+  total: number;
+  completed: number;
+  partial: number;
+  fields: { key: string; name: string; answered: number; groups: { name: string; count: number; risks?: Partial<Record<DemographicRiskGuide, DemographicRiskCounts>> }[] }[];
+}
+
 export interface CompanyDashboardResponse {
+  demographics?: DashboardDemographics;
   assignedFormKeys: FormKey[];
   employees: DashboardEmployee[];
 }
