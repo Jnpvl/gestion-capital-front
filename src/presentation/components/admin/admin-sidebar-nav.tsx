@@ -24,7 +24,7 @@ export function AdminSidebarNav({
   const navigation = customNavigation ?? getAdminNavigation(user?.role ?? "teacher");
 
   return (
-    <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-6">
+    <nav className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-3 py-6">
       {navigation.map((section) => (
         <div key={section.title}>
           <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-brand-muted">

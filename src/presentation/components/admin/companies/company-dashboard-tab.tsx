@@ -1,6 +1,9 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
+import { CompanyDashboardDemographics } from "./company-dashboard-demographics";
+import { CompanyDashboardClinical } from "./company-dashboard-clinical";
+import { CompanyDashboardCharts } from "./company-dashboard-charts";
 import {
   EMPLOYEE_FORM_STATUS_LABEL,
   RISK_LEVEL_COLOR,
@@ -92,6 +95,7 @@ export function CompanyDashboardTab({
   readOnly?: boolean;
 }) {
   const [data, setData] = useState<CompanyDashboardResponse | null>(null);
+  const [view, setView] = useState("general");
   const [open, setOpen] = useState<string | null>(null);
 
   useEffect(() => {
@@ -105,10 +109,45 @@ export function CompanyDashboardTab({
 
   if (!data) return <div className="text-sm text-brand-muted">Cargando dashboard...</div>;
 
+  const tabs = [
+    { id: "general", label: "Resultados generales" },
+    { id: "clinical", label: "Guía I · Valoración clínica" },
+    ...(data.assignedFormKeys.includes("nom035_guia2") ? [{ id: "psychosocial2", label: "Riesgo psicosocial II" }] : []),
+    ...(data.assignedFormKeys.includes("nom035_guia3") ? [{ id: "psychosocial3", label: "Riesgo psicosocial III" }] : []),
+    { id: "demographics", label: "Guía V · Perfil de trabajadores" },
+  ];
+  const activeView = tabs.some(tab => tab.id === view) ? view : "general";
+
   return (
+    <div className="mx-auto max-w-[1600px] space-y-6">
+    <div className="flex gap-1 overflow-x-auto rounded-2xl border border-brand-line bg-white p-1.5 shadow-sm" role="tablist" aria-label="Vistas del dashboard" onKeyDown={(event) => {
+      const ids = tabs.map(tab => tab.id);
+      const index = ids.indexOf(activeView);
+      const next = event.key === "ArrowRight" ? (index + 1) % ids.length : event.key === "ArrowLeft" ? (index + ids.length - 1) % ids.length : event.key === "Home" ? 0 : event.key === "End" ? ids.length - 1 : null;
+      if (next !== null) {
+        event.preventDefault();
+        setView(ids[next]);
+        document.getElementById(`dashboard-view-${ids[next]}`)?.focus();
+      }
+    }}>
+      {tabs.map(tab => <button key={tab.id} id={`dashboard-view-${tab.id}`} type="button" role="tab" aria-selected={activeView === tab.id} aria-controls={`dashboard-panel-${tab.id}`} tabIndex={activeView === tab.id ? 0 : -1} onClick={() => setView(tab.id)} className={`shrink-0 rounded-xl px-4 py-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue ${activeView === tab.id ? "bg-brand-blue text-white" : "text-brand-muted hover:bg-brand-light"}`}>{tab.label}</button>)}
+    </div>
+    {data.assignedFormKeys.includes("nom035_guia2") && <div id="dashboard-panel-psychosocial2" role="tabpanel" aria-labelledby="dashboard-view-psychosocial2" hidden={activeView !== "psychosocial2"}>
+      <CompanyDashboardCharts data={data} guide="nom035_guia2" />
+    </div>}
+    {data.assignedFormKeys.includes("nom035_guia3") && <div id="dashboard-panel-psychosocial3" role="tabpanel" aria-labelledby="dashboard-view-psychosocial3" hidden={activeView !== "psychosocial3"}>
+      <CompanyDashboardCharts data={data} guide="nom035_guia3" />
+    </div>}
+    <div id="dashboard-panel-clinical" role="tabpanel" aria-labelledby="dashboard-view-clinical" hidden={activeView !== "clinical"}>
+      <CompanyDashboardClinical data={data} />
+    </div>
+    <div id="dashboard-panel-demographics" role="tabpanel" aria-labelledby="dashboard-view-demographics" hidden={activeView !== "demographics"}>
+      <CompanyDashboardDemographics data={data.demographics} />
+    </div>
+    <div id="dashboard-panel-general" role="tabpanel" aria-labelledby="dashboard-view-general" hidden={activeView !== "general"}>
     <div className="rounded-2xl border border-brand-line bg-white">
       <div className="border-b border-brand-line p-6">
-        <h2 className="font-display text-lg font-bold text-brand-gray">Resultados NOM-035</h2>
+        <h2 className="font-display text-lg font-bold text-brand-gray">Resultados generales</h2>
         <p className="mt-1 text-sm text-brand-muted">
           Vista general por empleado. «No aplica»: la guía no está asignada a la empresa. «N/A»: aún
           sin resultado. Clic en un resultado de Guía II o III para ver el detalle y la necesidad de acción.
@@ -199,6 +238,8 @@ export function CompanyDashboardTab({
           </table>
         </div>
       )}
+    </div>
+    </div>
     </div>
   );
 }
