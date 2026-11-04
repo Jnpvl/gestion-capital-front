@@ -1,3 +1,4 @@
+import { studentFetch } from "./session-fetch";
 import type {
   StudentLoginResponse,
   StudentMeResponse,
@@ -32,7 +33,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
 }
 
 export async function studentLogin(email: string, password: string) {
-  const response = await fetch(`${env.apiUrl}/api/auth/student/login`, {
+  const response = await studentFetch(`${env.apiUrl}/api/auth/student/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -42,7 +43,7 @@ export async function studentLogin(email: string, password: string) {
 }
 
 export async function getStudentMe(token: string) {
-  const response = await fetch(`${env.apiUrl}/api/auth/student/me`, {
+  const response = await studentFetch(`${env.apiUrl}/api/auth/student/me`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -53,7 +54,7 @@ export async function getStudentMe(token: string) {
 }
 
 export async function acceptStudentPrivacy(token: string) {
-  const response = await fetch(`${env.apiUrl}/api/auth/student/privacy`, {
+  const response = await studentFetch(`${env.apiUrl}/api/auth/student/privacy`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

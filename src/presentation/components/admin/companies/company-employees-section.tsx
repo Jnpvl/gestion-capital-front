@@ -329,7 +329,7 @@ export function CompanyEmployeesSection({
                       </td>
                     )}
                     <td className="px-6 py-4 align-middle">
-                      <EmployeeName id={employee.id} name={employee.name} readOnly={readOnly} />
+                      <EmployeeName id={employee.id} name={employee.name} readOnly={readOnly} companyId={company.id} />
                     </td>
                     <td className="px-4 py-4 align-middle font-mono text-xs text-brand-muted">
                       {employee.curp || "—"}
@@ -374,7 +374,7 @@ export function CompanyEmployeesSection({
               <article key={employee.id} className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <EmployeeName id={employee.id} name={employee.name} readOnly={readOnly} />
+                    <EmployeeName id={employee.id} name={employee.name} readOnly={readOnly} companyId={company.id} />
                     <p className="mt-0.5 truncate text-xs text-brand-muted">
                       {employee.email}
                     </p>
@@ -521,10 +521,10 @@ export function CompanyEmployeesSection({
   );
 }
 
-function EmployeeName({ id, name, readOnly }: { id: string; name: string; readOnly: boolean }) {
-  if (readOnly) return <span className="font-medium text-brand-gray">{name}</span>;
+function EmployeeName({ id, name, readOnly, companyId }: { id: string; name: string; readOnly: boolean; companyId: string }) {
+  if (readOnly) return <Link href={`/empresa/empleados/${id}`} className="group inline-flex flex-col gap-1 font-medium text-brand-gray hover:text-brand-blue"><span>{name}</span><span className="text-xs font-semibold text-brand-blue group-hover:underline">Ver detalle →</span></Link>;
   return (
-    <Link href={`/admin/alumnos/${id}`} className="font-medium text-brand-gray hover:text-brand-blue">
+    <Link href={`/admin/alumnos/${id}?returnTo=${encodeURIComponent(`/admin/empresas/${companyId}?tab=empleados`)}`} className="font-medium text-brand-gray hover:text-brand-blue">
       {name}
     </Link>
   );

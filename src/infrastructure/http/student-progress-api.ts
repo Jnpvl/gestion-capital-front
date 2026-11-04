@@ -1,3 +1,4 @@
+import { studentFetch } from "./session-fetch";
 import type { ApiErrorBody } from "@/core/domain/auth/types";
 import type {
   CourseProgressResponse,
@@ -21,7 +22,7 @@ async function request<T>(
   token: string,
   options?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(`${env.apiUrl}/api/student/courses${path}`, {
+  const response = await studentFetch(`${env.apiUrl}/api/student/courses${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -73,7 +74,7 @@ export async function submitAssignment(
     formData.append("studentComment", studentComment.trim());
   }
 
-  const response = await fetch(
+  const response = await studentFetch(
     `${env.apiUrl}/api/student/courses/${slug}/assignments/${blockId}/submit`,
     {
       method: "POST",

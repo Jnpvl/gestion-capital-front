@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { SessionLoadError } from "@/presentation/components/ui/session-load-error";
+import { CompanyPortalApiError } from "@/infrastructure/http/company-portal-api";
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { companyAuthStorage } from "@/infrastructure/auth/company-auth-storage";
@@ -33,6 +35,8 @@ export function usePortalCompany(): PortalCompany {
 /** Layout del portal de empresa: mismo sidebar que el admin, solo lectura. */
 export function CompanyPortalShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const [sessionError, setSessionError] = useState(false);
+  const [retry, setRetry] = useState(0);
   const [company, setCompany] = useState<PortalCompany | null>(null);
 
   const logout = useCallback(() => {
@@ -47,8 +51,12 @@ export function CompanyPortalShell({ children }: { children: React.ReactNode }) 
     }
     getPortalCompany()
       .then((r) => setCompany(r.company))
-      .catch(logout);
-  }, [router, logout]);
+      .catch(error => {
+        if (!(error instanceof CompanyPortalApiError && error.status === 401)) setSessionError(true);
+      });
+  }, [router, retry]);
+
+  if (sessionError) return <SessionLoadError onRetry={() => { setSessionError(false); setRetry(value => value + 1); }} />;
 
   if (!company) {
     return (

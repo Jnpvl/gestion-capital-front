@@ -1,3 +1,4 @@
+import { companyFetch } from "./session-fetch";
 import type { ApiErrorBody } from "@/core/domain/auth/types";
 import type { CompanyDetail } from "@/core/domain/companies/types";
 import type {
@@ -7,7 +8,7 @@ import type {
   FormDefinition,
   FormKey,
 } from "@/core/domain/forms/types";
-import type { StudentsListResponse } from "@/core/domain/students/types";
+import type { StudentDetail, StudentEnrollment, StudentsListResponse } from "@/core/domain/students/types";
 import { companyAuthStorage } from "@/infrastructure/auth/company-auth-storage";
 import { env } from "@/shared/config/env";
 
@@ -28,7 +29,7 @@ export class CompanyPortalApiError extends Error {
 async function get<T>(path: string): Promise<T> {
   const token = companyAuthStorage.getToken();
   if (!token) throw new CompanyPortalApiError("No hay sesión activa", 401);
-  const response = await fetch(`${env.apiUrl}/api/company${path}`, {
+  const response = await companyFetch(`${env.apiUrl}/api/company${path}`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
   });
@@ -69,4 +70,9 @@ export function getPortalForm(key: string) {
 
 export function getPortalFormResults() {
   return get<CompanyDashboardResponse>("/forms/results");
+}
+
+export type PortalEmployee = Pick<StudentDetail, "id" | "name" | "paternalLastName" | "maternalLastName" | "firstNames" | "email" | "phone" | "curp" | "gender" | "age" | "residenceLocation" | "educationLevel" | "professionArea" | "educationInstitution" | "currentlyEmployed" | "jobType" | "currentPosition" | "industrySector" | "yearsExperience" | "timeInCurrentPosition" | "stpsOccupationCode" | "stpsOccupationName" | "stpsThematicAreaCode" | "stpsThematicAreaName" | "companyId" | "companyName" | "companyRfc">;
+export function getPortalEmployeeDetail(studentId: string) {
+  return get<{ student: PortalEmployee; enrollments: StudentEnrollment[] }>(`/employees/${encodeURIComponent(studentId)}`);
 }

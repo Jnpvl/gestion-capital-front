@@ -1,3 +1,4 @@
+import { studentFetch } from "./session-fetch";
 import type { ApiErrorBody } from "@/core/domain/auth/types";
 import type {
   StudentCourseDetailResponse,
@@ -17,7 +18,7 @@ class StudentCoursesApiError extends Error {
 }
 
 async function request<T>(path: string, token: string): Promise<T> {
-  const response = await fetch(`${env.apiUrl}/api/student/courses${path}`, {
+  const response = await studentFetch(`${env.apiUrl}/api/student/courses${path}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

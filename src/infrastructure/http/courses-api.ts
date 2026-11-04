@@ -1,3 +1,4 @@
+import { staffFetch } from "./session-fetch";
 import type { ApiErrorBody } from "@/core/domain/auth/types";
 import type {
   AssignmentSubmissionListItem,
@@ -19,7 +20,7 @@ class CoursesApiError extends Error {
 }
 
 async function request<T>(path: string, token: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${env.apiUrl}/api/admin/courses${path}`, {
+  const response = await staffFetch(`${env.apiUrl}/api/admin/courses${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -140,7 +141,7 @@ async function fetchCertificatePreviewBlob(
   const query = new URLSearchParams();
   if (templateUrl) query.set("templateUrl", templateUrl);
   const qs = query.toString();
-  const response = await fetch(
+  const response = await staffFetch(
     `${env.apiUrl}/api/admin/courses${path}${qs ? `?${qs}` : ""}`,
     {
       headers: {
@@ -238,7 +239,7 @@ async function downloadEnrollmentPdf(
   }
 
   const suffix = kind === "dc3" ? "/certificate/dc3" : "/certificate";
-  const response = await fetch(
+  const response = await staffFetch(
     `${env.apiUrl}/api/admin/courses/${courseId}/enrollments/${enrollmentId}${suffix}`,
     {
       headers: { Authorization: `Bearer ${token}` },
@@ -310,7 +311,7 @@ export async function exportCourseCertificatesZip(
   }
   const qs = query.toString();
 
-  const response = await fetch(
+  const response = await staffFetch(
     `${env.apiUrl}/api/admin/courses/${courseId}/certificates/export${qs ? `?${qs}` : ""}`,
     {
       headers: { Authorization: `Bearer ${token}` },
@@ -371,7 +372,7 @@ export async function downloadPresencialTemplate(courseId: string) {
     throw new CoursesApiError("No hay sesión activa", 401);
   }
 
-  const response = await fetch(
+  const response = await staffFetch(
     `${env.apiUrl}/api/admin/courses/${courseId}/presencial/template`,
     {
       headers: { Authorization: `Bearer ${token}` },
@@ -409,7 +410,7 @@ export async function importPresencialExcel(courseId: string, file: File) {
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(
+  const response = await staffFetch(
     `${env.apiUrl}/api/admin/courses/${courseId}/presencial/import`,
     {
       method: "POST",

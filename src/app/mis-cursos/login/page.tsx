@@ -1,3 +1,4 @@
+import { SessionExpiredNotice } from "@/presentation/components/ui/session-expired-notice";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StudentLoginForm } from "@/presentation/components/student/student-login-form";
@@ -9,7 +10,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function StudentLoginPage() {
+export default async function StudentLoginPage({ searchParams }: { searchParams: Promise<{ reason?: string }> }) {
+  const { reason } = await searchParams;
   return (
     <StudentLoginRedirect>
       <div className="flex min-h-screen flex-col bg-brand-light">
@@ -32,7 +34,8 @@ export default function StudentLoginPage() {
                 Ingresa con las credenciales que te proporcionó el equipo de Gestiona.
               </p>
             </div>
-            <StudentLoginForm />
+            <SessionExpiredNotice visible={reason === "session-expired"} />
+          <StudentLoginForm />
           </div>
         </div>
       </div>

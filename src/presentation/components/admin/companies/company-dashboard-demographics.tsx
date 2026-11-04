@@ -1,5 +1,7 @@
 "use client";
 
+import { EmployeeRiskBar } from "./employee-risk-bar";
+import type { DashboardEmployee } from "@/core/domain/forms/types";
 import { useState } from "react";
 import { RISK_LEVEL_COLOR, RISK_LEVEL_LABEL, type RiskLevel, type DemographicRiskGuide, type DashboardDemographics } from "@/core/domain/forms/types";
 
@@ -13,7 +15,7 @@ const sections = [
   { title: "Jornada y experiencia", description: "Horarios, rotación de turnos y trayectoria laboral.", keys: ["tipo_jornada", "rotacion_turnos", "tiempo_puesto", "tiempo_experiencia"], color: "#8b5e20" },
 ];
 
-export function CompanyDashboardDemographics({ data }: { data?: DashboardDemographics }) {
+export function CompanyDashboardDemographics({ data, employees, readOnly, returnTo }: { data?: DashboardDemographics; employees: DashboardEmployee[]; readOnly: boolean; returnTo: string }) {
   const [guide, setGuide] = useState<DemographicRiskGuide | null>(null);
   const available = data?.riskGuides ?? [];
   const selectedGuide = available.find(key => key === guide) ?? available[0];
@@ -65,10 +67,15 @@ export function CompanyDashboardDemographics({ data }: { data?: DashboardDemogra
               </div>
               {risks ? <>
                 <p className="mt-3 text-[11px] font-semibold text-brand-muted">Riesgo según {guideLabel} · {group.count} personas en este grupo</p>
-                <div className="mt-3 flex h-4 overflow-hidden rounded-md bg-brand-light" role="img" aria-label={`${group.name}: ${levels.map(level => `${riskLabel(level)} ${risks[level]} de ${group.count}`).join(", ")}`}>
-                  {levels.filter(level => risks[level] > 0).map(level => <div key={level} className="h-full border-r border-white/70 last:border-0" style={{ width: `${risks[level] / group.count * 100}%`, background: riskColor(level) }} title={`${riskLabel(level)}: ${risks[level]} de ${group.count} (${format.format(risks[level] / group.count * 100)}%)`} />)}
-                </div>
-                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-brand-muted">{levels.filter(level => risks[level] > 0).map(level => <span key={level} className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full border border-black/10" style={{ background: riskColor(level) }} />{riskLabel(level)}: <strong className="font-semibold text-brand-gray">{risks[level]} · {format.format(risks[level] / group.count * 100)}%</strong></span>)}</div>
+                <div className="mt-3"><EmployeeRiskBar key={selectedGuide} label={`${field.name} · ${group.name} · ${guideLabel}`} readOnly={readOnly} returnTo={returnTo} segments={levels.map(level => ({
+                  key: level, label: riskLabel(level), color: riskColor(level), count: risks[level],
+                  people: employees.filter(employee => {
+                    if (!group.studentIds?.includes(employee.studentId) || !selectedGuide) return false;
+                    const cell = employee.forms[selectedGuide];
+                    const employeeLevel = cell?.status === "completed" ? cell.result?.level ?? "sin_resultado" : "sin_resultado";
+                    return employeeLevel === level;
+                  }).map(employee => ({ studentId: employee.studentId, name: employee.employeeName })),
+                }))}/></div>
               </> : <div className="mt-2 h-1 overflow-hidden rounded-full bg-brand-light" aria-hidden="true"><div className="h-full rounded-full" style={{ width: `${percentage}%`, background: section.color }} /></div>}
 
             </div>;

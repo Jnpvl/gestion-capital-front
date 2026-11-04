@@ -1,3 +1,4 @@
+import { staffFetch } from "./session-fetch";
 import type { ApiErrorBody } from "@/core/domain/auth/types";
 import type {
   CreateStaffInput,
@@ -20,7 +21,7 @@ class StaffApiError extends Error {
 }
 
 async function request<T>(path: string, token: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${env.apiUrl}/api/admin/staff${path}`, {
+  const response = await staffFetch(`${env.apiUrl}/api/admin/staff${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",

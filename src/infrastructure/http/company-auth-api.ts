@@ -1,3 +1,4 @@
+import { companyFetch } from "./session-fetch";
 import type { ApiErrorBody } from "@/core/domain/auth/types";
 import { env } from "@/shared/config/env";
 
@@ -32,7 +33,7 @@ async function parse<T>(response: Response): Promise<T> {
 }
 
 export async function companyLogin(email: string, password: string) {
-  const response = await fetch(`${env.apiUrl}/api/auth/company/login`, {
+  const response = await companyFetch(`${env.apiUrl}/api/auth/company/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -41,7 +42,7 @@ export async function companyLogin(email: string, password: string) {
 }
 
 export async function getCompanyMe(token: string) {
-  const response = await fetch(`${env.apiUrl}/api/auth/company/me`, {
+  const response = await companyFetch(`${env.apiUrl}/api/auth/company/me`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
   });

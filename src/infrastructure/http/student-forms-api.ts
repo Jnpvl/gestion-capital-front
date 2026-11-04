@@ -1,3 +1,4 @@
+import { studentFetch } from "./session-fetch";
 import type { ApiErrorBody } from "@/core/domain/auth/types";
 import type { FormAnswers, FormDefinition, FormKey } from "@/core/domain/forms/types";
 import { studentAuthStorage } from "@/infrastructure/auth/student-auth-storage";
@@ -28,7 +29,7 @@ export interface StudentPendingForm {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = studentAuthStorage.getToken();
   if (!token) throw new StudentFormsApiError("No hay sesión activa", 401);
-  const response = await fetch(`${env.apiUrl}/api/student/forms${path}`, {
+  const response = await studentFetch(`${env.apiUrl}/api/student/forms${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     cache: "no-store",

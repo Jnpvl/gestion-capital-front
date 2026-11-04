@@ -1,3 +1,4 @@
+import { SessionExpiredNotice } from "@/presentation/components/ui/session-expired-notice";
 import type { Metadata } from "next";
 import { AdminLoginForm } from "@/presentation/components/admin/admin-login-form";
 import { AdminLoginRedirect } from "@/presentation/components/admin/admin-login-redirect";
@@ -8,7 +9,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function AdminLoginPage() {
+export default async function AdminLoginPage({ searchParams }: { searchParams: Promise<{ reason?: string }> }) {
+  const { reason } = await searchParams;
   return (
     <AdminLoginRedirect>
       <div className="flex min-h-screen items-center justify-center bg-brand-light px-4">
@@ -24,7 +26,8 @@ export default function AdminLoginPage() {
             Ingresa con tu cuenta de administrador o maestro.
           </p>
         </div>
-        <AdminLoginForm />
+        <SessionExpiredNotice visible={reason === "session-expired"} />
+          <AdminLoginForm />
       </div>
     </div>
     </AdminLoginRedirect>

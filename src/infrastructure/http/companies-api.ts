@@ -1,3 +1,4 @@
+import { staffFetch } from "./session-fetch";
 import type { ApiErrorBody, ApiFieldError } from "@/core/domain/auth/types";
 import type {
   CompaniesListResponse,
@@ -24,7 +25,7 @@ class CompaniesApiError extends Error {
 }
 
 async function request<T>(path: string, token: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${env.apiUrl}/api/admin/companies${path}`, {
+  const response = await staffFetch(`${env.apiUrl}/api/admin/companies${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -114,7 +115,7 @@ export async function downloadCompanyEmployeesTemplate(companyId: string) {
   const token = authStorage.getToken();
   if (!token) throw new CompaniesApiError("No hay sesión activa", 401);
 
-  const response = await fetch(
+  const response = await staffFetch(
     `${env.apiUrl}/api/admin/companies/${companyId}/employees/template`,
     { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
   );
@@ -149,7 +150,7 @@ export async function importCompanyEmployees(
   const formData = new FormData();
   formData.append("sendWelcomeEmail", options.sendWelcomeEmail ? "true" : "false");
   formData.append("file", file);
-  const response = await fetch(
+  const response = await staffFetch(
     `${env.apiUrl}/api/admin/companies/${companyId}/employees/import`,
     {
       method: "POST",
