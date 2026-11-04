@@ -1,3 +1,4 @@
+import { staffFetch } from "./session-fetch";
 import type {
   ApiErrorBody,
   StaffLoginResponse,
@@ -32,7 +33,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
 }
 
 export async function staffLogin(email: string, password: string) {
-  const response = await fetch(`${env.apiUrl}/api/auth/staff/login`, {
+  const response = await staffFetch(`${env.apiUrl}/api/auth/staff/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -42,7 +43,7 @@ export async function staffLogin(email: string, password: string) {
 }
 
 export async function getStaffMe(token: string) {
-  const response = await fetch(`${env.apiUrl}/api/auth/staff/me`, {
+  const response = await staffFetch(`${env.apiUrl}/api/auth/staff/me`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

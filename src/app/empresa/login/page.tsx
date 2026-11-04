@@ -1,3 +1,4 @@
+import { SessionExpiredNotice } from "@/presentation/components/ui/session-expired-notice";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CompanyLoginForm } from "@/presentation/components/company/company-login-form";
@@ -8,7 +9,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function CompanyLoginPage() {
+export default async function CompanyLoginPage({ searchParams }: { searchParams: Promise<{ reason?: string }> }) {
+  const { reason } = await searchParams;
   return (
     <div className="flex min-h-screen flex-col bg-brand-light">
       <div className="px-4 pt-6">
@@ -28,6 +30,7 @@ export default function CompanyLoginPage() {
               Ingresa con las credenciales que te proporcionó el equipo de Gestiona.
             </p>
           </div>
+          <SessionExpiredNotice visible={reason === "session-expired"} />
           <CompanyLoginForm />
         </div>
       </div>

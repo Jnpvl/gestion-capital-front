@@ -1,3 +1,4 @@
+import { staffFetch } from "./session-fetch";
 import type { ApiErrorBody } from "@/core/domain/auth/types";
 import type {
   SubscriberListItem,
@@ -18,7 +19,7 @@ class SubscribersApiError extends Error {
 }
 
 async function request<T>(path: string, token: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${env.apiUrl}/api/admin/subscribers${path}`, {
+  const response = await staffFetch(`${env.apiUrl}/api/admin/subscribers${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",

@@ -1,3 +1,4 @@
+import { staffFetch } from "./session-fetch";
 import type { CourseAssetKind } from "@/core/domain/courses/types";
 import type { ApiErrorBody } from "@/core/domain/auth/types";
 import { env } from "@/shared/config/env";
@@ -79,7 +80,7 @@ async function postFile(
     headers["X-Previous-Upload-Path"] = managedPrevious;
   }
 
-  const response = await fetch(url, {
+  const response = await staffFetch(url, {
     method: "POST",
     headers,
     body: formData,
@@ -147,7 +148,7 @@ export async function deleteUploadedAsset(
   if (options?.courseId) params.set("courseId", options.courseId);
   if (options?.staffId) params.set("staffId", options.staffId);
 
-  const response = await fetch(`${env.apiUrl}/api/admin/uploads?${params.toString()}`, {
+  const response = await staffFetch(`${env.apiUrl}/api/admin/uploads?${params.toString()}`, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${token}`,

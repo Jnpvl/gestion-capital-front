@@ -1,5 +1,6 @@
 "use client";
 
+import { EmployeeRiskBar, type RiskBarPerson } from "./employee-risk-bar";
 import { RISK_LEVEL_COLOR, RISK_LEVEL_LABEL, type CompanyDashboardResponse, type DashboardFormResult, type RiskLevel } from "@/core/domain/forms/types";
 
 const LEVELS: RiskLevel[] = ["nulo", "bajo", "medio", "alto", "muy_alto"];
@@ -7,16 +8,16 @@ const GUIDES = [{ key: "nom035_guia2", label: "Guía II" }, { key: "nom035_guia3
 const number = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 1 });
 const pct = (n: number, total: number) => total ? n / total * 100 : 0;
 
-type Group = { key: string; name: string; sum: number; count: number; high: number; levels: Record<RiskLevel, number> };
-function aggregate(results: DashboardFormResult[], field: "categories" | "domains"): Group[] {
+type Group = { key: string; name: string; sum: number; count: number; high: number; levels: Record<RiskLevel, number>; people: Record<RiskLevel, RiskBarPerson[]> };
+function aggregate(results: (DashboardFormResult & RiskBarPerson)[], field: "categories" | "domains"): Group[] {
   const groups = new Map<string, Group>();
   for (const result of results) {
     for (const item of result[field]) {
       if (!Number.isFinite(item.value)) continue;
-      const group = groups.get(item.key) ?? { key: item.key, name: item.name, sum: 0, count: 0, high: 0, levels: { nulo: 0, bajo: 0, medio: 0, alto: 0, muy_alto: 0 } };
+      const group = groups.get(item.key) ?? { key: item.key, name: item.name, sum: 0, count: 0, high: 0, people: { nulo: [], bajo: [], medio: [], alto: [], muy_alto: [] }, levels: { nulo: 0, bajo: 0, medio: 0, alto: 0, muy_alto: 0 } };
       group.sum += item.value;
       group.count++;
-      if (LEVELS.includes(item.level)) group.levels[item.level]++;
+      if (LEVELS.includes(item.level)) { group.levels[item.level]++; group.people[item.level].push({ studentId: result.studentId, name: result.name }); }
       if (item.level === "alto" || item.level === "muy_alto") group.high++;
       groups.set(item.key, group);
     }
@@ -24,7 +25,7 @@ function aggregate(results: DashboardFormResult[], field: "categories" | "domain
   return [...groups.values()];
 }
 
-function Bars({ groups }: { groups: Group[] }) {
+function Bars({ groups, readOnly, returnTo }: { groups: Group[]; readOnly: boolean; returnTo: string }) {
   return <div className="space-y-6">
     <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-brand-muted">{LEVELS.map(level => <span key={level} className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full border border-black/10" style={{ background: RISK_LEVEL_COLOR[level].background }} />{RISK_LEVEL_LABEL[level]}</span>)}</div>
     {groups.map(g => <div key={g.key}>
@@ -32,10 +33,8 @@ function Bars({ groups }: { groups: Group[] }) {
         <span className="font-medium text-brand-gray">{g.name}</span>
         <span className="shrink-0 font-semibold tabular-nums text-brand-gray">{number.format(g.sum / g.count)} <span className="text-xs font-normal text-brand-muted">pts promedio</span></span>
       </div>
-      <div className="flex h-5 overflow-hidden rounded-lg bg-brand-light" role="img" aria-label={`${g.name}: ${LEVELS.map(level => `${RISK_LEVEL_LABEL[level]} ${g.levels[level]} de ${g.count}`).join(", ")}`}>
-        {LEVELS.filter(level => g.levels[level] > 0).map(level => <div key={level} className="h-full border-r border-white/60 last:border-r-0" style={{ width: `${pct(g.levels[level], g.count)}%`, background: RISK_LEVEL_COLOR[level].background }} title={`${RISK_LEVEL_LABEL[level]}: ${g.levels[level]} de ${g.count} (${number.format(pct(g.levels[level], g.count))}%)`} />)}
-      </div>
-      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-brand-muted">{LEVELS.filter(level => g.levels[level] > 0).map(level => <span key={level}>{RISK_LEVEL_LABEL[level]}: <strong className="font-semibold text-brand-gray">{g.levels[level]} · {number.format(pct(g.levels[level], g.count))}%</strong></span>)}</div>
+      <EmployeeRiskBar label={g.name} readOnly={readOnly} returnTo={returnTo} segments={LEVELS.map(level => ({ key: level, label: RISK_LEVEL_LABEL[level], color: RISK_LEVEL_COLOR[level].background, count: g.levels[level], people: g.people[level] }))}/>
+
     </div>)}
   </div>;
 }
@@ -60,11 +59,11 @@ function Radar({ groups }: { groups: Group[] }) {
   </>;
 }
 
-export function CompanyDashboardCharts({ data, guide }: { data: CompanyDashboardResponse; guide: "nom035_guia2" | "nom035_guia3" }) {
+export function CompanyDashboardCharts({ data, guide, readOnly, returnTo }: { data: CompanyDashboardResponse; guide: "nom035_guia2" | "nom035_guia3"; readOnly: boolean; returnTo: string }) {
   const selected = GUIDES.find(g => g.key === guide && data.assignedFormKeys.includes(g.key));
   const results = selected ? data.employees.flatMap(e => {
     const cell = e.forms[selected.key];
-    return cell?.status === "completed" && cell.result ? [cell.result] : [];
+    return cell?.status === "completed" && cell.result ? [{ ...cell.result, studentId: e.studentId, name: e.employeeName }] : [];
   }) : [];
   const categories = aggregate(results, "categories");
   const domains = aggregate(results, "domains");
@@ -104,9 +103,9 @@ export function CompanyDashboardCharts({ data, guide }: { data: CompanyDashboard
       </div>;
     })}</div>
     {!results.length ? <div className="rounded-2xl border border-dashed border-brand-line bg-white px-6 py-12 text-center"><h3 className="font-semibold text-brand-gray">{selected ? "Aún no hay resultados completos" : "Sin guía de riesgo psicosocial asignada"}</h3><p className="mt-2 text-sm text-brand-muted">{selected ? `Los gráficos de ${selected.label} aparecerán cuando se completen los cuestionarios.` : "Los gráficos por categoría y dominio estarán disponibles al asignar y completar la Guía II o III."}</p></div> : <>
-      <div className="rounded-2xl border border-brand-line bg-white p-6"><h3 className="font-display font-bold text-brand-gray">Distribución del nivel de riesgo</h3><p className="mt-1 text-xs text-brand-muted">{classified} resultados clasificados · {selected?.label}</p><div className="mt-5 flex h-4 overflow-hidden rounded-full bg-brand-light" aria-hidden="true">{counts.map(c => <div key={c.level} style={{ width: `${pct(c.count, classified)}%`, background: RISK_LEVEL_COLOR[c.level].background }} />)}</div><div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-5">{counts.map(c => <div key={c.level}><div className="flex items-center gap-2 text-xs text-brand-muted"><span className="h-2.5 w-2.5 rounded-full border border-black/10" style={{ background: RISK_LEVEL_COLOR[c.level].background }} />{RISK_LEVEL_LABEL[c.level]}</div><p className="mt-1 text-lg font-bold text-brand-gray">{c.count} <span className="text-xs font-normal text-brand-muted">· {number.format(pct(c.count, classified))}%</span></p></div>)}</div></div>
-      <div className="grid items-start gap-6 xl:grid-cols-2"><div className="rounded-2xl border border-brand-line bg-white p-6"><h3 className="font-display font-bold text-brand-gray">Nivel de riesgo por categoría</h3><p className="mb-6 mt-1 text-xs text-brand-muted">Distribución de empleados por nivel de riesgo. Cada barra representa el 100% de sus evaluados.</p>{categories.length ? <Bars groups={categories} /> : <p className="text-sm text-brand-muted">Sin detalle de categorías disponible.</p>}</div><div className="rounded-2xl border border-brand-line bg-white p-6"><h3 className="font-display font-bold text-brand-gray">Perfil de riesgo por dominio</h3><p className="mt-1 text-xs text-brand-muted">Porcentaje con riesgo alto o muy alto · escala común de 0 a 100%.</p><Radar groups={domains} /></div></div>
-      <div className="rounded-2xl border border-brand-line bg-white p-6"><h3 className="font-display font-bold text-brand-gray">Nivel de riesgo por dominio</h3><p className="mb-6 mt-1 text-xs text-brand-muted">Colores según el nivel calculado de cada empleado en el dominio. El puntaje promedio se muestra por separado.</p>{domains.length ? <Bars groups={domains} /> : <p className="text-sm text-brand-muted">Sin detalle de dominios disponible.</p>}</div>
+      <div className="rounded-2xl border border-brand-line bg-white p-6"><h3 className="font-display font-bold text-brand-gray">Distribución del nivel de riesgo</h3><p className="mt-1 text-xs text-brand-muted">{classified} resultados clasificados · {selected?.label}</p><div className="mt-5"><EmployeeRiskBar label="Distribución del nivel de riesgo" readOnly={readOnly} returnTo={returnTo} segments={counts.map(c => ({ key: c.level, label: RISK_LEVEL_LABEL[c.level], color: RISK_LEVEL_COLOR[c.level].background, count: c.count, people: results.filter(r => r.level === c.level) }))}/></div><div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-5">{counts.map(c => <div key={c.level}><div className="flex items-center gap-2 text-xs text-brand-muted"><span className="h-2.5 w-2.5 rounded-full border border-black/10" style={{ background: RISK_LEVEL_COLOR[c.level].background }} />{RISK_LEVEL_LABEL[c.level]}</div><p className="mt-1 text-lg font-bold text-brand-gray">{c.count} <span className="text-xs font-normal text-brand-muted">· {number.format(pct(c.count, classified))}%</span></p></div>)}</div></div>
+      <div className="grid items-start gap-6 xl:grid-cols-2"><div className="rounded-2xl border border-brand-line bg-white p-6"><h3 className="font-display font-bold text-brand-gray">Nivel de riesgo por categoría</h3><p className="mb-6 mt-1 text-xs text-brand-muted">Distribución de empleados por nivel de riesgo. Cada barra representa el 100% de sus evaluados.</p>{categories.length ? <Bars groups={categories} readOnly={readOnly} returnTo={returnTo} /> : <p className="text-sm text-brand-muted">Sin detalle de categorías disponible.</p>}</div><div className="rounded-2xl border border-brand-line bg-white p-6"><h3 className="font-display font-bold text-brand-gray">Perfil de riesgo por dominio</h3><p className="mt-1 text-xs text-brand-muted">Porcentaje con riesgo alto o muy alto · escala común de 0 a 100%.</p><Radar groups={domains} /></div></div>
+      <div className="rounded-2xl border border-brand-line bg-white p-6"><h3 className="font-display font-bold text-brand-gray">Nivel de riesgo por dominio</h3><p className="mb-6 mt-1 text-xs text-brand-muted">Colores según el nivel calculado de cada empleado en el dominio. El puntaje promedio se muestra por separado.</p>{domains.length ? <Bars groups={domains} readOnly={readOnly} returnTo={returnTo} /> : <p className="text-sm text-brand-muted">Sin detalle de dominios disponible.</p>}</div>
     </>}
   </section>;
 }

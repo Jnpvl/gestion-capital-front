@@ -288,7 +288,7 @@ export interface DashboardDemographics {
   total: number;
   completed: number;
   partial: number;
-  fields: { key: string; name: string; answered: number; groups: { name: string; count: number; risks?: Partial<Record<DemographicRiskGuide, DemographicRiskCounts>> }[] }[];
+  fields: { key: string; name: string; answered: number; groups: { name: string; count: number; studentIds?: string[]; risks?: Partial<Record<DemographicRiskGuide, DemographicRiskCounts>> }[] }[];
 }
 
 export interface CompanyDashboardResponse {

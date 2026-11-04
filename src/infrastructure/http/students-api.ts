@@ -1,3 +1,4 @@
+import { staffFetch } from "./session-fetch";
 import type {
   CreateStudentInput,
   StudentDetail,
@@ -23,7 +24,7 @@ class StudentsApiError extends Error {
 }
 
 async function request<T>(path: string, token: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${env.apiUrl}/api/admin/students${path}`, {
+  const response = await staffFetch(`${env.apiUrl}/api/admin/students${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",

@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { SessionLoadError } from "@/presentation/components/ui/session-load-error";
 import type { StudentUser } from "@/core/domain/student/types";
 import { studentAuthStorage } from "@/infrastructure/auth/student-auth-storage";
 import { ApiClientError, acceptStudentPrivacy, getStudentMe, studentLogin } from "@/infrastructure/http/student-auth-api";
@@ -27,29 +28,28 @@ const StudentAuthContext = createContext<StudentAuthContextValue | null>(null);
 export function StudentAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<StudentUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const loadSession = useCallback(async () => {
-    const token = studentAuthStorage.getToken();
-    if (!token) {
-      setUser(null);
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const { user: studentUser } = await getStudentMe(token);
-      setUser(studentUser);
-    } catch {
-      studentAuthStorage.clearToken();
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const [sessionError, setSessionError] = useState(false);
+  const [sessionRevision, setSessionRevision] = useState(0);
 
   useEffect(() => {
-    void loadSession();
-  }, [loadSession]);
+    let cancelled = false;
+    const token = studentAuthStorage.getToken();
+    const request = token ? getStudentMe(token) : Promise.resolve(null);
+    request.then(session => {
+      if (!cancelled && studentAuthStorage.getToken() === token) setUser(session?.user ?? null);
+    }).catch(error => {
+      if (cancelled) return;
+      if (error instanceof ApiClientError && error.status === 401) {
+        // The HTTP layer clears only the matching session and opens its login.
+        if (!studentAuthStorage.getToken()) setUser(null);
+      } else {
+        setSessionError(true);
+      }
+    }).finally(() => {
+      if (!cancelled) setIsLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [sessionRevision]);
 
   const login = useCallback(async (email: string, password: string) => {
     const { token, user: studentUser } = await studentLogin(email, password);
@@ -83,6 +83,8 @@ export function StudentAuthProvider({ children }: { children: ReactNode }) {
     }),
     [user, isLoading, login, acceptPrivacy, logout],
   );
+
+  if (sessionError) return <SessionLoadError onRetry={() => { setSessionError(false); setIsLoading(true); setSessionRevision(value => value + 1); }} />;
 
   return <StudentAuthContext.Provider value={value}>{children}</StudentAuthContext.Provider>;
 }

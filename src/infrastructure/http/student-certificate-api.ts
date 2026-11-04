@@ -1,3 +1,4 @@
+import { studentFetch } from "./session-fetch";
 import { env } from "@/shared/config/env";
 import { studentAuthStorage } from "@/infrastructure/auth/student-auth-storage";
 
@@ -12,7 +13,7 @@ export async function downloadCourseCertificate(slug: string): Promise<void> {
     throw new Error("No hay sesión activa");
   }
 
-  const response = await fetch(`${env.apiUrl}/api/student/courses/${slug}/certificate`, {
+  const response = await studentFetch(`${env.apiUrl}/api/student/courses/${slug}/certificate`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -44,7 +45,7 @@ export async function downloadCourseDc3(slug: string): Promise<void> {
     throw new Error("No hay sesión activa");
   }
 
-  const response = await fetch(`${env.apiUrl}/api/student/courses/${slug}/certificate/dc3`, {
+  const response = await studentFetch(`${env.apiUrl}/api/student/courses/${slug}/certificate/dc3`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },

@@ -1,6 +1,8 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { DashboardEmployeeLink } from "./dashboard-employee-link";
+import { useSearchParams } from "next/navigation";
+import { Fragment, Suspense, useEffect, useState } from "react";
 import { CompanyDashboardDemographics } from "./company-dashboard-demographics";
 import { CompanyDashboardClinical } from "./company-dashboard-clinical";
 import { CompanyDashboardCharts } from "./company-dashboard-charts";
@@ -87,7 +89,11 @@ function GuideCell({
 }
 
 /** readOnly: portal de empresa (datos del token de empresa, sin companyId de la URL). */
-export function CompanyDashboardTab({
+export function CompanyDashboardTab(props: { companyId: string; readOnly?: boolean }) {
+  return <Suspense fallback={<p>Cargando dashboard...</p>}><DashboardContent {...props} /></Suspense>;
+}
+
+function DashboardContent({
   companyId,
   readOnly = false,
 }: {
@@ -95,7 +101,10 @@ export function CompanyDashboardTab({
   readOnly?: boolean;
 }) {
   const [data, setData] = useState<CompanyDashboardResponse | null>(null);
-  const [view, setView] = useState("general");
+  const searchParams = useSearchParams();
+  const [view, setView] = useState(searchParams.get("dashboardView") || "general");
+  const dashboardUrl = readOnly ? "/empresa" : `/admin/empresas/${companyId}?tab=dashboard`;
+  const returnTo = `${dashboardUrl}${readOnly ? "?" : "&"}dashboardView=${encodeURIComponent(view)}`;
   const [open, setOpen] = useState<string | null>(null);
 
   useEffect(() => {
@@ -133,16 +142,16 @@ export function CompanyDashboardTab({
       {tabs.map(tab => <button key={tab.id} id={`dashboard-view-${tab.id}`} type="button" role="tab" aria-selected={activeView === tab.id} aria-controls={`dashboard-panel-${tab.id}`} tabIndex={activeView === tab.id ? 0 : -1} onClick={() => setView(tab.id)} className={`shrink-0 rounded-xl px-4 py-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue ${activeView === tab.id ? "bg-brand-blue text-white" : "text-brand-muted hover:bg-brand-light"}`}>{tab.label}</button>)}
     </div>
     {data.assignedFormKeys.includes("nom035_guia2") && <div id="dashboard-panel-psychosocial2" role="tabpanel" aria-labelledby="dashboard-view-psychosocial2" hidden={activeView !== "psychosocial2"}>
-      <CompanyDashboardCharts data={data} guide="nom035_guia2" />
+      <CompanyDashboardCharts data={data} guide="nom035_guia2" readOnly={readOnly} returnTo={returnTo} />
     </div>}
     {data.assignedFormKeys.includes("nom035_guia3") && <div id="dashboard-panel-psychosocial3" role="tabpanel" aria-labelledby="dashboard-view-psychosocial3" hidden={activeView !== "psychosocial3"}>
-      <CompanyDashboardCharts data={data} guide="nom035_guia3" />
+      <CompanyDashboardCharts data={data} guide="nom035_guia3" readOnly={readOnly} returnTo={returnTo} />
     </div>}
     <div id="dashboard-panel-clinical" role="tabpanel" aria-labelledby="dashboard-view-clinical" hidden={activeView !== "clinical"}>
-      <CompanyDashboardClinical data={data} />
+      <CompanyDashboardClinical data={data} readOnly={readOnly} returnTo={returnTo} />
     </div>
     <div id="dashboard-panel-demographics" role="tabpanel" aria-labelledby="dashboard-view-demographics" hidden={activeView !== "demographics"}>
-      <CompanyDashboardDemographics data={data.demographics} />
+      <CompanyDashboardDemographics data={data.demographics} employees={data.employees} readOnly={readOnly} returnTo={returnTo} />
     </div>
     <div id="dashboard-panel-general" role="tabpanel" aria-labelledby="dashboard-view-general" hidden={activeView !== "general"}>
     <div className="rounded-2xl border border-brand-line bg-white">
@@ -178,7 +187,7 @@ export function CompanyDashboardTab({
                 return (
                   <Fragment key={e.studentId}>
                     <tr>
-                      <td className="px-6 py-4 font-medium text-brand-gray">{e.employeeName}</td>
+                      <td className="px-6 py-4 font-medium text-brand-gray"><DashboardEmployeeLink studentId={e.studentId} name={e.employeeName} readOnly={readOnly} returnTo={returnTo} /></td>
                       {GUIDES.map((g) => {
                         const id = `${e.studentId}:${g.key}`;
                         return (

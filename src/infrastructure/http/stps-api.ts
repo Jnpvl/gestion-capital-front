@@ -1,3 +1,4 @@
+import { staffFetch } from "./session-fetch";
 import type { StpsOccupationItem, StpsThematicAreaItem } from "@/core/domain/students/types";
 import type { ApiErrorBody } from "@/core/domain/auth/types";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
@@ -23,7 +24,7 @@ async function fetchCatalog<T>(path: string, search?: string): Promise<T> {
   const query = new URLSearchParams();
   if (search?.trim()) query.set("search", search.trim());
 
-  const response = await fetch(
+  const response = await staffFetch(
     `${env.apiUrl}/api/admin/stps/${path}${query.toString() ? `?${query.toString()}` : ""}`,
     {
       headers: {

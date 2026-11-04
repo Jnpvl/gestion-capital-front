@@ -1,3 +1,4 @@
+import { staffFetch } from "./session-fetch";
 import type { ApiErrorBody, ApiFieldError } from "@/core/domain/auth/types";
 import type {
   CompanyDashboardResponse,
@@ -27,7 +28,7 @@ export class FormsApiError extends Error {
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = authStorage.getToken();
   if (!token) throw new FormsApiError("No hay sesión activa", 401);
-  const response = await fetch(`${env.apiUrl}/api/admin${path}`, {
+  const response = await staffFetch(`${env.apiUrl}/api/admin${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",

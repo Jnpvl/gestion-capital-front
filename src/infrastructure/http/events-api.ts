@@ -1,3 +1,4 @@
+import { staffFetch } from "./session-fetch";
 import type { ApiErrorBody } from "@/core/domain/auth/types";
 import type {
   EventFormValues,
@@ -19,7 +20,7 @@ class EventsApiError extends Error {
 }
 
 async function request<T>(path: string, token: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${env.apiUrl}/api/admin/events${path}`, {
+  const response = await staffFetch(`${env.apiUrl}/api/admin/events${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
