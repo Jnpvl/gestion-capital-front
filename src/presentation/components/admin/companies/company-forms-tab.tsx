@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useAuth } from "@/presentation/providers/auth-provider";
+import { CompanyFormsImport } from "./company-forms-import";
 import { useCallback, useEffect, useState } from "react";
 import {
   FORM_MODE_HINT,
@@ -24,6 +26,7 @@ function inUseMessage(n: number) {
 }
 
 export function CompanyFormsTab({ companyId }: { companyId: string }) {
+  const { user } = useAuth();
   const [data, setData] = useState<CompanyFormsResponse | null>(null);
   const [selected, setSelected] = useState<FormKey[]>([]);
   const [dueAt, setDueAt] = useState("");
@@ -238,6 +241,8 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
           empleado está pendiente (no se envían correos).
         </p>
       </div>
+
+      {(user?.role === "admin" || user?.role === "super_admin") && <CompanyFormsImport companyId={companyId} assigned={data.assignedFormKeys} onImported={() => { void load(); }} />}
 
       <div className="rounded-2xl border border-brand-line bg-white">
         <div className="border-b border-brand-line p-6">

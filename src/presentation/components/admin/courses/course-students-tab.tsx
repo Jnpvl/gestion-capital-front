@@ -15,6 +15,7 @@ import {
   exportCourseCertificatesZip,
   listCourseEnrollments,
   markCourseEnrollmentCompleted,
+  sendEnrollmentCertificate,
 } from "@/infrastructure/http/courses-api";
 import { confirmAction, showError, showSuccess } from "@/shared/lib/alerts";
 import { cn } from "@/shared/lib/cn";
@@ -60,6 +61,7 @@ export function CourseStudentsTab({ courseId }: CourseStudentsTabProps) {
   const [periodFrom, setPeriodFrom] = useState("");
   const [periodTo, setPeriodTo] = useState("");
   const [exportingKind, setExportingKind] = useState<"constancia" | "dc3" | null>(null);
+  const [selectedEnrollmentIds, setSelectedEnrollmentIds] = useState<string[]>([]);
 
   const loadEnrollments = useCallback(async () => {
     const token = authStorage.getToken();
@@ -91,15 +93,29 @@ export function CourseStudentsTab({ courseId }: CourseStudentsTabProps) {
     });
   }, [enrollments, deliveryFilter, periodFrom, periodTo]);
 
+  const selectedEnrollments = useMemo(
+    () => filteredEnrollments.filter((item) => selectedEnrollmentIds.includes(item.id)),
+    [filteredEnrollments, selectedEnrollmentIds],
+  );
+
   const exportableCount = useMemo(
-    () => filteredEnrollments.filter((item) => item.canDownloadCertificate).length,
-    [filteredEnrollments],
+    () => selectedEnrollments.filter((item) => item.canDownloadCertificate).length,
+    [selectedEnrollments],
   );
 
   const exportableDc3Count = useMemo(
-    () => filteredEnrollments.filter((item) => item.canDownloadDc3).length,
+    () => selectedEnrollments.filter((item) => item.canDownloadDc3).length,
+    [selectedEnrollments],
+  );
+
+  const selectableEnrollments = useMemo(
+    () => filteredEnrollments.filter((item) => item.canDownloadCertificate || item.canDownloadDc3),
     [filteredEnrollments],
   );
+
+  const allVisibleSelected =
+    selectableEnrollments.length > 0 &&
+    selectableEnrollments.every((item) => selectedEnrollmentIds.includes(item.id));
 
   async function handleMarkCompleted(enrollment: CourseEnrollmentListItem) {
     const token = authStorage.getToken();
@@ -146,6 +162,46 @@ export function CourseStudentsTab({ courseId }: CourseStudentsTabProps) {
     }
   }
 
+  async function handleSendCertificate(enrollment: CourseEnrollmentListItem) {
+    const token = authStorage.getToken();
+    if (!token) return;
+
+    const confirmed = await confirmAction({
+      title: "Enviar constancia",
+      text: `Se enviará la constancia disponible a ${enrollment.studentEmail}.${enrollment.canDownloadDc3 ? " También se adjuntará su DC-3." : ""}`,
+      confirmText: "Sí, enviar correo",
+      icon: "question",
+    });
+    if (!confirmed) return;
+
+    setBusyId(enrollment.id);
+    try {
+      await sendEnrollmentCertificate(token, courseId, enrollment.id);
+      showSuccess("Constancia enviada por correo");
+    } catch (err) {
+      showError(
+        err instanceof CoursesApiError ? err.message : "No se pudo enviar la constancia",
+      );
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  function toggleEnrollmentSelection(enrollmentId: string, checked: boolean) {
+    setSelectedEnrollmentIds((current) =>
+      checked ? [...new Set([...current, enrollmentId])] : current.filter((id) => id !== enrollmentId),
+    );
+  }
+
+  function toggleVisibleSelection(checked: boolean) {
+    const visibleIds = new Set(selectableEnrollments.map((item) => item.id));
+    setSelectedEnrollmentIds((current) =>
+      checked
+        ? [...new Set([...current, ...visibleIds])]
+        : current.filter((id) => !visibleIds.has(id)),
+    );
+  }
+
   async function handleBulkExport(kind: "constancia" | "dc3") {
     const count = kind === "dc3" ? exportableDc3Count : exportableCount;
     const labelDoc = kind === "dc3" ? "DC3" : "constancia";
@@ -167,7 +223,7 @@ export function CourseStudentsTab({ courseId }: CourseStudentsTabProps) {
 
     const confirmed = await confirmAction({
       title: kind === "dc3" ? "Exportar DC3" : "Exportar constancias",
-      text: `Se descargará un ZIP con ${count} ${count === 1 ? labelDoc : labelDocs} (${label}).`,
+      text: `Se descargará un ZIP con ${count} ${count === 1 ? labelDoc : labelDocs} de los alumnos seleccionados (${label}).`,
       confirmText: "Descargar ZIP",
       icon: "question",
     });
@@ -180,7 +236,8 @@ export function CourseStudentsTab({ courseId }: CourseStudentsTabProps) {
         kind,
         enrollmentIds: filteredEnrollments
           .filter((item) =>
-            kind === "dc3" ? item.canDownloadDc3 : item.canDownloadCertificate,
+            selectedEnrollmentIds.includes(item.id) &&
+            (kind === "dc3" ? item.canDownloadDc3 : item.canDownloadCertificate),
           )
           .map((item) => item.id),
       });
@@ -215,7 +272,7 @@ export function CourseStudentsTab({ courseId }: CourseStudentsTabProps) {
         <div>
           <h2 className="font-display text-lg font-bold text-brand-gray">Alumnos inscritos</h2>
           <p className="mt-1 text-sm text-brand-muted">
-            Filtra por modalidad o rango de fechas y exporta constancias o DC3 del filtro.
+            Selecciona alumnos y exporta sus constancias o DC3 disponibles.
           </p>
         </div>
 
@@ -305,7 +362,7 @@ export function CourseStudentsTab({ courseId }: CourseStudentsTabProps) {
         {hasPeriodFilter
           ? ` · periodo ${periodFrom || "…"} → ${periodTo || "…"}`
           : ""}
-        .
+        {selectedEnrollments.length > 0 ? ` · ${selectedEnrollments.length} seleccionado(s).` : "."}
       </p>
 
       {filteredEnrollments.length === 0 ? (
@@ -317,6 +374,16 @@ export function CourseStudentsTab({ courseId }: CourseStudentsTabProps) {
           <table className="min-w-full text-left text-sm">
             <thead>
               <tr className="border-b border-brand-line text-xs uppercase tracking-wide text-brand-muted">
+                <th className="w-10 px-3 py-2">
+                  <input
+                    type="checkbox"
+                    aria-label="Seleccionar alumnos visibles con documentos disponibles"
+                    checked={allVisibleSelected}
+                    disabled={selectableEnrollments.length === 0}
+                    onChange={(event) => toggleVisibleSelection(event.target.checked)}
+                    className="size-4 rounded border-brand-line text-brand-blue focus:ring-brand-blue disabled:opacity-50"
+                  />
+                </th>
                 <th className="px-3 py-2 font-semibold">Alumno</th>
                 <th className="px-3 py-2 font-semibold">Modalidad</th>
                 <th className="px-3 py-2 font-semibold">Periodo</th>
@@ -329,6 +396,18 @@ export function CourseStudentsTab({ courseId }: CourseStudentsTabProps) {
             <tbody>
               {filteredEnrollments.map((enrollment) => (
                 <tr key={enrollment.id} className="border-b border-brand-line last:border-0">
+                  <td className="px-3 py-3">
+                    <input
+                      type="checkbox"
+                      aria-label={`Seleccionar a ${enrollment.studentName}`}
+                      checked={selectedEnrollmentIds.includes(enrollment.id)}
+                      disabled={!enrollment.canDownloadCertificate && !enrollment.canDownloadDc3}
+                      onChange={(event) =>
+                        toggleEnrollmentSelection(enrollment.id, event.target.checked)
+                      }
+                      className="size-4 rounded border-brand-line text-brand-blue focus:ring-brand-blue disabled:opacity-40"
+                    />
+                  </td>
                   <td className="px-3 py-3">
                     <Link
                       href={`/admin/alumnos/${enrollment.studentId}`}
@@ -374,14 +453,24 @@ export function CourseStudentsTab({ courseId }: CourseStudentsTabProps) {
                         </button>
                       )}
                       {enrollment.canDownloadCertificate && (
-                        <button
-                          type="button"
-                          disabled={busyId === enrollment.id}
-                          onClick={() => void handleDownload(enrollment, "certificate")}
-                          className="text-xs font-medium text-brand-blue hover:underline disabled:opacity-50"
-                        >
-                          Exportar constancia
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            disabled={busyId === enrollment.id}
+                            onClick={() => void handleDownload(enrollment, "certificate")}
+                            className="text-xs font-medium text-brand-blue hover:underline disabled:opacity-50"
+                          >
+                            Exportar constancia
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyId === enrollment.id}
+                            onClick={() => void handleSendCertificate(enrollment)}
+                            className="text-xs font-medium text-brand-blue hover:underline disabled:opacity-50"
+                          >
+                            Enviar constancia
+                          </button>
+                        </>
                       )}
                       {enrollment.canDownloadDc3 && (
                         <button
