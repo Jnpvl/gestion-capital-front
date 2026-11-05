@@ -20,6 +20,8 @@ export function CoursePresencialEmissionTab({
   const [isDownloading, setIsDownloading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [result, setResult] = useState<PresencialImportResult | null>(null);
+  const [sendAccessEmail, setSendAccessEmail] = useState(false);
+  const [sendCertificateEmail, setSendCertificateEmail] = useState(false);
 
   async function handleDownloadTemplate() {
     setIsDownloading(true);
@@ -43,7 +45,10 @@ export function CoursePresencialEmissionTab({
     setIsImporting(true);
     setResult(null);
     try {
-      const data = await importPresencialExcel(courseId, file);
+      const data = await importPresencialExcel(courseId, file, {
+        sendAccessEmail,
+        sendCertificateEmail,
+      });
       setResult(data);
       if (data.errors === 0) {
         showSuccess(`Se procesaron ${data.issuedCertificates} constancias`);
@@ -81,6 +86,46 @@ export function CoursePresencialEmissionTab({
           <p className="mt-2 text-red-600">El curso debe estar publicado para poder importar.</p>
         )}
       </div>
+
+      <fieldset className="rounded-xl border border-brand-line bg-white p-4">
+        <legend className="px-1 text-sm font-semibold text-brand-gray">Notificaciones por correo</legend>
+        <p className="mb-3 text-sm text-brand-muted">
+          Elige qué avisos enviar al procesar este archivo. Si no marcas opciones, solo se crean las
+          inscripciones y constancias, sin correos.
+        </p>
+        <div className="space-y-3">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={sendAccessEmail}
+              disabled={isImporting}
+              onChange={(event) => setSendAccessEmail(event.target.checked)}
+              className="mt-0.5 size-4 rounded border-brand-line text-brand-blue focus:ring-brand-blue"
+            />
+            <span>
+              <span className="block text-sm font-medium text-brand-gray">Enviar acceso al curso</span>
+              <span className="block text-xs text-brand-muted">
+                Envía la inscripción; si el alumno es nuevo, también sus credenciales de acceso.
+              </span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={sendCertificateEmail}
+              disabled={isImporting}
+              onChange={(event) => setSendCertificateEmail(event.target.checked)}
+              className="mt-0.5 size-4 rounded border-brand-line text-brand-blue focus:ring-brand-blue"
+            />
+            <span>
+              <span className="block text-sm font-medium text-brand-gray">Enviar constancia</span>
+              <span className="block text-xs text-brand-muted">
+                Envía el aviso de curso terminado con la constancia adjunta y, cuando corresponda, el DC-3.
+              </span>
+            </span>
+          </label>
+        </div>
+      </fieldset>
 
       <div className="flex flex-wrap gap-3">
         <button

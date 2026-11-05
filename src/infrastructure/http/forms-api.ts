@@ -113,3 +113,40 @@ export function unassignCompanyForm(companyId: string, formKey: FormKey) {
     { method: "DELETE" },
   );
 }
+
+export interface FormImportResult {
+  dryRun: boolean;
+  valid: number;
+  imported: number;
+  skipped: number;
+  errors: number;
+  rows: { row: number; employee: string; status: "valid" | "imported" | "skipped" | "error"; message: string }[];
+}
+
+async function excelRequest(companyId: string, key: FormKey, suffix: string, body?: FormData) {
+  const token = authStorage.getToken();
+  if (!token) throw new FormsApiError("No hay sesión activa", 401);
+  const response = await staffFetch(`${env.apiUrl}/api/admin/companies/${companyId}/forms/${key}/${suffix}`, {
+    method: body ? "POST" : "GET", body, headers: { Authorization: `Bearer ${token}` }, cache: "no-store",
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new FormsApiError(data?.error?.message ?? "No se pudo procesar el Excel", response.status);
+  }
+  return response;
+}
+export async function downloadFormTemplate(companyId: string, key: FormKey) {
+  const response = await excelRequest(companyId, key, "template");
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `plantilla-${key}.xlsx`;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+export async function importFormExcel(companyId: string, key: FormKey, file: File, dryRun: boolean): Promise<FormImportResult> {
+  const body = new FormData();
+  body.append("file", file);
+  body.append("dryRun", String(dryRun));
+  return (await excelRequest(companyId, key, "import", body)).json();
+}

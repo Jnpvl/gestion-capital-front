@@ -227,6 +227,18 @@ export async function markCourseEnrollmentCompleted(
   );
 }
 
+export async function sendEnrollmentCertificate(
+  token: string,
+  courseId: string,
+  enrollmentId: string,
+) {
+  return request<{ ok: true }>(
+    `/${courseId}/enrollments/${enrollmentId}/certificate/send`,
+    token,
+    { method: "POST" },
+  );
+}
+
 async function downloadEnrollmentPdf(
   courseId: string,
   enrollmentId: string,
@@ -401,7 +413,11 @@ export async function downloadPresencialTemplate(courseId: string) {
   URL.revokeObjectURL(url);
 }
 
-export async function importPresencialExcel(courseId: string, file: File) {
+export async function importPresencialExcel(
+  courseId: string,
+  file: File,
+  options: { sendAccessEmail: boolean; sendCertificateEmail: boolean },
+) {
   const token = authStorage.getToken();
   if (!token) {
     throw new CoursesApiError("No hay sesión activa", 401);
@@ -409,6 +425,8 @@ export async function importPresencialExcel(courseId: string, file: File) {
 
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("sendAccessEmail", String(options.sendAccessEmail));
+  formData.append("sendCertificateEmail", String(options.sendCertificateEmail));
 
   const response = await staffFetch(
     `${env.apiUrl}/api/admin/courses/${courseId}/presencial/import`,
