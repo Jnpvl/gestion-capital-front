@@ -27,29 +27,31 @@ function inUseMessage(n: number) {
 
 export function CompanyFormsTab({ companyId }: { companyId: string }) {
   const { user } = useAuth();
+  const currentYear = new Date().getFullYear();
+  const [year, setYear] = useState(currentYear);
   const [data, setData] = useState<CompanyFormsResponse | null>(null);
   const [selected, setSelected] = useState<FormKey[]>([]);
   const [dueAt, setDueAt] = useState("");
   const [modes, setModes] = useState<Partial<Record<FormKey, FormMode>>>({});
   const [isSaving, setIsSaving] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (evaluationYear = year) => {
     try {
-      const result = await getCompanyForms(companyId);
+      const result = await getCompanyForms(companyId, evaluationYear);
       setData(result);
       return result;
     } catch (err) {
       showError(err instanceof Error ? err.message : "Error al cargar formularios");
       return null;
     }
-  }, [companyId]);
+  }, [companyId, year]);
 
   useEffect(() => {
     // Ya asignadas aparecen marcadas; si no hay ninguna, se proponen las sugeridas.
-    void load().then(
+    void load(year).then(
       (r) => r && setSelected(r.assignedFormKeys.length ? r.assignedFormKeys : r.suggestedFormKeys),
     );
-  }, [load]);
+  }, [load, year]);
 
   if (!data) return <div className="text-sm text-brand-muted">Cargando formularios...</div>;
 
@@ -68,15 +70,15 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
     const label = FORM_SHORT_LABEL[key] ?? key;
     const ok = await confirmAction({
       title: `¿Desasignar ${label}?`,
-      text: `Se quitará ${label} de esta empresa. Ningún empleado la ha empezado, así que no se pierden respuestas.`,
+      text: `Se quitará ${label} de la evaluación ${year}. Ningún empleado la ha empezado, así que no se pierden respuestas.`,
       confirmText: "Sí, desasignar",
     });
     if (!ok) return;
     try {
-      await unassignCompanyForm(companyId, key);
-      const r = await load();
+      await unassignCompanyForm(companyId, key, year);
+      const r = await load(year);
       if (r) setSelected((s) => s.filter((k) => k !== key || r.assignedFormKeys.includes(k)));
-      showSuccess(`${label} desasignada`);
+      showSuccess(`${label} desasignada (${year})`);
     } catch (err) {
       showError(err instanceof Error ? err.message : "No se pudo desasignar");
     }
@@ -90,8 +92,8 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
     });
     if (!ok) return;
     try {
-      await setCompanyFormMode(companyId, key, mode);
-      await load();
+      await setCompanyFormMode(companyId, key, mode, year);
+      await load(year);
       showSuccess(`${label}: ${FORM_MODE_LABEL[mode]}`);
     } catch (err) {
       showError(err instanceof Error ? err.message : "No se pudo cambiar el modo");
@@ -108,18 +110,30 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
     try {
       await createFormAssignment(companyId, {
         formKeys: newKeys,
+        evaluationYear: year,
         modes: Object.fromEntries(newKeys.map((k) => [k, modes[k] ?? "admin_applied"])),
         dueAt: dueAt ? new Date(`${dueAt}T23:59:59`).toISOString() : null,
       });
-      await load();
+      await load(year);
       setDueAt("");
-      showSuccess("Formularios asignados. Aún no se envían correos a los empleados.");
+      showSuccess(`Formularios asignados para ${year}. Aún no se envían correos a los empleados.`);
     } catch (err) {
       showError(err instanceof Error ? err.message : "No se pudo asignar");
     } finally {
       setIsSaving(false);
     }
   }
+
+  const yearOptions = Array.from(
+    new Set([
+      ...(data.evaluationYears ?? []),
+      year,
+      currentYear - 1,
+      currentYear,
+      currentYear + 1,
+    ]),
+  ).sort((a, b) => b - a);
+  const activeYear = data.evaluationYear ?? year;
 
   return (
     <div className="space-y-6">
@@ -131,6 +145,28 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
             : `Sin número de trabajadores capturado (se usa empleados vinculados: ${data.employeesLinked}). Captúralo en Datos generales.`}{" "}
           {suggestionRuleLabel(data.workersCount ?? (data.employeesLinked || null))}
         </p>
+
+        <div className="mt-4">
+          <label className="text-sm font-semibold text-brand-gray" htmlFor="evaluation-year">
+            Año de evaluación
+          </label>
+          <select
+            id="evaluation-year"
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            className="mt-1.5 block w-full max-w-xs rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm text-brand-gray"
+          >
+            {yearOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1.5 text-xs text-brand-muted">
+            Cada año guarda su propia evaluación. Cambia el año arriba para ver o asignar guías de ese periodo
+            (p. ej. 2026 y 2027 pueden tener la misma Guía II por separado).
+          </p>
+        </div>
 
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           {data.forms.map((form) => {
@@ -156,7 +192,7 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
                     <span className="font-semibold text-brand-gray">{form.title}</span>
                     {assigned && (
                       <span className="rounded-full bg-brand-black px-2 py-0.5 text-xs font-semibold text-white">
-                        Asignada
+                        Asignada {activeYear}
                       </span>
                     )}
                     {isSuggested(form.key) && (
@@ -232,25 +268,39 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
             {isSaving
               ? "Asignando..."
               : newKeys.length > 0
-                ? `Asignar (${newKeys.length})`
-                : "Asignar"}
+                ? `Asignar ${activeYear} (${newKeys.length})`
+                : `Asignar ${activeYear}`}
           </button>
         </div>
         <p className="mt-3 text-xs text-brand-muted">
-          Se registra la asignación para los empleados vinculados. El envío del enlace a cada
-          empleado está pendiente (no se envían correos).
+          Se registra la asignación del año {activeYear} para los empleados vinculados. El envío del
+          enlace a cada empleado está pendiente (no se envían correos).
         </p>
       </div>
 
-      {(user?.role === "admin" || user?.role === "super_admin") && <CompanyFormsImport companyId={companyId} assigned={data.assignedFormKeys} onImported={() => { void load(); }} />}
+      {(user?.role === "admin" || user?.role === "super_admin") && (
+        <CompanyFormsImport
+          companyId={companyId}
+          evaluationYears={data.evaluationYears ?? []}
+          onImported={(importedYear) => {
+            if (importedYear === year) void load(year);
+            else setYear(importedYear);
+          }}
+        />
+      )}
 
       <div className="rounded-2xl border border-brand-line bg-white">
         <div className="border-b border-brand-line p-6">
-          <h2 className="font-display text-lg font-bold text-brand-gray">Asignaciones</h2>
+          <h2 className="font-display text-lg font-bold text-brand-gray">
+            Asignaciones {activeYear}
+          </h2>
+          <p className="mt-1 text-sm text-brand-muted">
+            Solo se listan las guías del año seleccionado. Cambia el año arriba para ver 2025, 2026, 2027, etc.
+          </p>
         </div>
         {progressRows.length === 0 ? (
           <div className="px-6 py-12 text-center text-sm text-brand-muted">
-            Aún no hay formularios asignados a esta empresa.
+            Aún no hay formularios asignados para {activeYear}.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -258,6 +308,7 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
               <thead>
                 <tr className="border-b border-brand-line bg-brand-light/60 text-xs uppercase tracking-wide text-brand-muted">
                   <th className="px-6 py-3.5 font-semibold">Guía</th>
+                  <th className="px-4 py-3.5 font-semibold">Año</th>
                   <th className="px-4 py-3.5 font-semibold">Modo</th>
                   <th className="px-4 py-3.5 font-semibold">Asignado</th>
                   <th className="px-4 py-3.5 font-semibold">Fecha límite</th>
@@ -274,13 +325,18 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
                     ? Math.round((g.completed / g.employeesTotal) * 100)
                     : 0;
                   return (
-                    <tr key={g.formKey}>
+                    <tr key={`${activeYear}-${g.formKey}`}>
                       <td className="px-6 py-4">
                         <span className="font-semibold text-brand-gray">
                           {FORM_SHORT_LABEL[g.formKey] ?? g.formKey}
                         </span>
                         <span className="mt-0.5 block text-xs text-brand-muted">
                           {data.forms.find((f) => f.key === g.formKey)?.subtitle ?? ""}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-4">
+                        <span className="rounded-full bg-brand-light px-2.5 py-1 text-xs font-semibold text-brand-gray">
+                          {activeYear}
                         </span>
                       </td>
                       <td className="px-4 py-4">

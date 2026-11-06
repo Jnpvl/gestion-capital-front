@@ -69,6 +69,38 @@ export interface CompanyEmployeeImportRowResult {
   message?: string;
 }
 
+export interface CompanyCourseSummary {
+  courseId: string;
+  courseTitle: string;
+  courseSlug: string;
+  deliveryModes: ("online" | "presencial")[];
+  activeCount: number;
+  completedCount: number;
+  employeesTotal: number;
+  firstEnrolledAt: string | null;
+  lastEnrolledAt: string | null;
+}
+
+export interface CompanyCourseAssignResult {
+  courseId: string;
+  courseTitle: string;
+  deliveryMode: "online" | "presencial";
+  enrolledViaCompany: true;
+  total: number;
+  assigned: number;
+  upgraded: number;
+  skipped: number;
+  failed: number;
+  results: {
+    studentId: string;
+    name: string;
+    email: string;
+    status: "assigned" | "upgraded" | "skipped" | "failed";
+    reason?: string;
+  }[];
+  courses: CompanyCourseSummary[];
+}
+
 export interface CompanyEmployeeImportResult {
   companyId: string;
   totalRows: number;

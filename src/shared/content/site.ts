@@ -40,6 +40,7 @@ export const footerNavigation: NavItem[] = [
   { label: "Servicios", href: "/servicios" },
   { label: "Cursos", href: "/cursos" },
   { label: "Eventos", href: "/eventos" },
+  { label: "Buscar constancia", href: "/constancia" },
   { label: "Contacto", href: "/contacto" },
 ];
 

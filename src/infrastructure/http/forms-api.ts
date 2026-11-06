@@ -57,13 +57,19 @@ export function getForm(key: string) {
   return request<{ form: FormDefinition }>(`/forms/${key}`);
 }
 
-export function getCompanyForms(companyId: string) {
-  return request<CompanyFormsResponse>(`/companies/${companyId}/forms`);
+export function getCompanyForms(companyId: string, year?: number | string) {
+  const qs = year != null ? `?year=${encodeURIComponent(String(year))}` : "";
+  return request<CompanyFormsResponse>(`/companies/${companyId}/forms${qs}`);
 }
 
 export function createFormAssignment(
   companyId: string,
-  input: { formKeys: FormKey[]; modes?: Partial<Record<FormKey, FormMode>>; dueAt?: string | null },
+  input: {
+    formKeys: FormKey[];
+    modes?: Partial<Record<FormKey, FormMode>>;
+    evaluationYear?: number;
+    dueAt?: string | null;
+  },
 ) {
   return request<{ assignment: FormAssignmentSummary }>(`/companies/${companyId}/forms/assignments`, {
     method: "POST",
@@ -96,26 +102,35 @@ export function updateEmployeeForm(
   );
 }
 
-export function getCompanyFormResults(companyId: string) {
-  return request<CompanyDashboardResponse>(`/companies/${companyId}/forms/results`);
+export function getCompanyFormResults(companyId: string, year?: number | string) {
+  const qs = year != null ? `?year=${encodeURIComponent(String(year))}` : "";
+  return request<CompanyDashboardResponse>(`/companies/${companyId}/forms/results${qs}`);
 }
 
-export function setCompanyFormMode(companyId: string, formKey: FormKey, mode: FormMode) {
+export function setCompanyFormMode(
+  companyId: string,
+  formKey: FormKey,
+  mode: FormMode,
+  year?: number | string,
+) {
+  const qs = year != null ? `?year=${encodeURIComponent(String(year))}` : "";
   return request<{ formKey: FormKey; mode: FormMode }>(
-    `/companies/${companyId}/forms/assignments/${formKey}/mode`,
+    `/companies/${companyId}/forms/assignments/${formKey}/mode${qs}`,
     { method: "PUT", body: JSON.stringify({ mode }) },
   );
 }
 
-export function unassignCompanyForm(companyId: string, formKey: FormKey) {
+export function unassignCompanyForm(companyId: string, formKey: FormKey, year?: number | string) {
+  const qs = year != null ? `?year=${encodeURIComponent(String(year))}` : "";
   return request<{ formKey: FormKey; unassigned: true }>(
-    `/companies/${companyId}/forms/assignments/${formKey}`,
+    `/companies/${companyId}/forms/assignments/${formKey}${qs}`,
     { method: "DELETE" },
   );
 }
 
 export interface FormImportResult {
   dryRun: boolean;
+  evaluationYear?: number;
   valid: number;
   imported: number;
   skipped: number;
@@ -144,9 +159,16 @@ export async function downloadFormTemplate(companyId: string, key: FormKey) {
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-export async function importFormExcel(companyId: string, key: FormKey, file: File, dryRun: boolean): Promise<FormImportResult> {
+export async function importFormExcel(
+  companyId: string,
+  key: FormKey,
+  file: File,
+  dryRun: boolean,
+  evaluationYear?: number,
+): Promise<FormImportResult> {
   const body = new FormData();
   body.append("file", file);
   body.append("dryRun", String(dryRun));
+  if (evaluationYear != null) body.append("evaluationYear", String(evaluationYear));
   return (await excelRequest(companyId, key, "import", body)).json();
 }

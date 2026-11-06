@@ -16,7 +16,7 @@ const COMPANY_NAV: AdminNavSection[] = [
   {
     title: "Mi empresa",
     items: [
-      { label: "Dashboard", href: "/empresa", icon: "dashboard" },
+      { label: "NOM-035", href: "/empresa", icon: "dashboard" },
       { label: "Datos generales", href: "/empresa/datos-generales", icon: "companies" },
       { label: "Empleados", href: "/empresa/empleados", icon: "students" },
     ],

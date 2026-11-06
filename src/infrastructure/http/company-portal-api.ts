@@ -68,8 +68,9 @@ export function getPortalForm(key: string) {
   return get<{ form: FormDefinition }>(`/forms/${key}`);
 }
 
-export function getPortalFormResults() {
-  return get<CompanyDashboardResponse>("/forms/results");
+export function getPortalFormResults(year?: number | string) {
+  const qs = year != null ? `?year=${encodeURIComponent(String(year))}` : "";
+  return get<CompanyDashboardResponse>(`/forms/results${qs}`);
 }
 
 export type PortalEmployee = Pick<StudentDetail, "id" | "name" | "paternalLastName" | "maternalLastName" | "firstNames" | "email" | "phone" | "curp" | "gender" | "age" | "residenceLocation" | "educationLevel" | "professionArea" | "educationInstitution" | "currentlyEmployed" | "jobType" | "currentPosition" | "industrySector" | "yearsExperience" | "timeInCurrentPosition" | "stpsOccupationCode" | "stpsOccupationName" | "stpsThematicAreaCode" | "stpsThematicAreaName" | "companyId" | "companyName" | "companyRfc">;

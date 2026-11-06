@@ -12,6 +12,7 @@ import {
 import { showError } from "@/shared/lib/alerts";
 import { CompanyEditForm } from "@/presentation/components/admin/companies/company-edit-form";
 import { CompanyAccessSection } from "@/presentation/components/admin/companies/company-access-section";
+import { CompanyCoursesTab } from "@/presentation/components/admin/companies/company-courses-tab";
 import { CompanyDashboardTab } from "@/presentation/components/admin/companies/company-dashboard-tab";
 import { CompanyFormsTab } from "@/presentation/components/admin/companies/company-forms-tab";
 import { CompanyEmployeesSection } from "@/presentation/components/admin/companies/company-employees-section";
@@ -19,8 +20,9 @@ import { CompanyEmployeesSection } from "@/presentation/components/admin/compani
 const TABS = [
   { id: "general", label: "Datos generales" },
   { id: "empleados", label: "Empleados" },
+  { id: "cursos", label: "Cursos" },
   { id: "formularios", label: "Formularios" },
-  { id: "dashboard", label: "Dashboard" },
+  { id: "dashboard", label: "NOM-035" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -148,6 +150,16 @@ export function CompanyDetailContent({ companyId }: CompanyDetailContentProps) {
           <CompanyEmployeesSection
             company={company}
             onEmployeeCreated={() => void loadCompany()}
+          />
+        </div>
+      )}
+
+      {activeTab === "cursos" && (
+        <div role="tabpanel" id="panel-cursos" aria-labelledby="tab-cursos">
+          <CompanyCoursesTab
+            companyId={company.id}
+            companyRfc={company.rfc}
+            employeesCount={company.studentsCount}
           />
         </div>
       )}

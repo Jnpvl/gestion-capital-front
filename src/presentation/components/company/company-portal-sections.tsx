@@ -13,7 +13,7 @@ export function CompanyPortalDashboard() {
   const company = usePortalCompany();
   return (
     <>
-      <Title>Dashboard</Title>
+      <Title>NOM-035</Title>
       <CompanyDashboardTab companyId={company.id} readOnly />
     </>
   );
