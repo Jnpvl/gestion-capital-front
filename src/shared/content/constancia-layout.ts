@@ -43,10 +43,9 @@ export const CONSTANCIA_LAYOUT = {
     maxHeightRatio: 0.08,
     maxWidthRatio: 0.28,
   },
-  qr: { top: 70.5, minSizeRatio: 0.16, rightRatio: 0.78 },
+  qr: { top: 70.5, minSizeRatio: 0.15, rightEdgeRatio: 0.934 },
   folio: { top: 88.5, fontSize: 13 },
-  folioRightRatio: 0.7,
-  disclaimer: { top: 93.2, fontSize: 11 },
+  disclaimer: { top: 94.0, fontSize: 11 },
 } as const;
 
 /** Paleta oficial de marca para constancias. */
