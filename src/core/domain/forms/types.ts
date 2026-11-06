@@ -213,20 +213,28 @@ export interface FormResultSummary {
 /**
  * Semáforo NOM-035 (Guías II y III):
  * Nulo #04B6D4 · Bajo #22C45F · Medio #EBB308 · Alto #FA7317 · Muy alto #EF4545.
+ * Texto blanco sobre el color de fondo.
  */
 export const RISK_LEVEL_COLOR: Record<RiskLevel, { background: string; color: string }> = {
-  nulo: { background: "#04B6D4", color: "#111827" },
-  bajo: { background: "#22C45F", color: "#111827" },
-  medio: { background: "#EBB308", color: "#111827" },
-  alto: { background: "#FA7317", color: "#111827" },
-  muy_alto: { background: "#EF4545", color: "#111827" },
+  nulo: { background: "#04B6D4", color: "#FFFFFF" },
+  bajo: { background: "#22C45F", color: "#FFFFFF" },
+  medio: { background: "#EBB308", color: "#FFFFFF" },
+  alto: { background: "#FA7317", color: "#FFFFFF" },
+  muy_alto: { background: "#EF4545", color: "#FFFFFF" },
 };
 
-/** Guía I: tonos suaves (rojo si requerirá atención clínica, verde si no). */
+/**
+ * Guía I (acontecimiento traumático severo):
+ * Rojo si requiere valoración · azul #2E3192 si no requiere.
+ * Texto blanco sobre el color de fondo.
+ */
+export const CLINICAL_RESULT_COLOR = {
+  requires: { background: "#EF4545", color: "#FFFFFF" },
+  none: { background: "#2E3192", color: "#FFFFFF" },
+} as const;
+
 export function clinicalResultColor(requires: boolean): { background: string; color: string } {
-  return requires
-    ? { background: "#FEE2E2", color: "#991B1B" }
-    : { background: "#DCFCE7", color: "#166534" };
+  return requires ? CLINICAL_RESULT_COLOR.requires : CLINICAL_RESULT_COLOR.none;
 }
 
 /** Guía I: texto literal de la regla GR.I. */
