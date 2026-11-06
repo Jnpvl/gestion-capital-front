@@ -297,6 +297,9 @@ export function CompanyEmployeesSection({
                     Puesto
                   </th>
                   <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-brand-muted">
+                    Ocupación STPS
+                  </th>
+                  <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-brand-muted">
                     Formularios
                   </th>
                   {!readOnly && (
@@ -341,6 +344,20 @@ export function CompanyEmployeesSection({
                       {employee.currentPosition || "—"}
                     </td>
                     <td className="px-4 py-4 align-middle">
+                      {employee.stpsOccupationCode ? (
+                        <div>
+                          <p className="text-brand-gray">{employee.stpsOccupationName || employee.stpsOccupationCode}</p>
+                          {employee.stpsOccupationName && (
+                            <p className="mt-0.5 font-mono text-xs text-brand-muted">{employee.stpsOccupationCode}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                          Sin STPS
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 align-middle">
                       <EmployeeFormsIcons
                         forms={formsByStudent[employee.id]}
                         readOnly={readOnly}
@@ -383,6 +400,17 @@ export function CompanyEmployeesSection({
                     </p>
                     <p className="mt-0.5 text-xs text-brand-muted">
                       {employee.currentPosition || "—"}
+                    </p>
+                    <p className="mt-1 text-xs">
+                      {employee.stpsOccupationCode ? (
+                        <span className="text-brand-muted">
+                          STPS: {employee.stpsOccupationName || employee.stpsOccupationCode}
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-800">
+                          Sin STPS
+                        </span>
+                      )}
                     </p>
                     <div className="mt-2">
                       <EmployeeFormsIcons

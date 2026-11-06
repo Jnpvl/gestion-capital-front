@@ -116,12 +116,14 @@ export function CompanyEmployeesImportModal({
             <div className="rounded-xl border border-brand-line bg-brand-light/50 p-4 text-sm">
               <p className="font-semibold text-brand-gray">1. Descarga la plantilla</p>
               <p className="mt-1 text-brand-muted">
-                Columnas: CURP, Apellido paterno, Apellido materno, Nombre(s), Correo, Teléfono y
-                Puesto. Obligatorias: CURP, apellido paterno, nombre(s) y correo.
+                Columnas: CURP, Apellido paterno, Apellido materno, Nombre(s), Correo, Teléfono,
+                Puesto y Código ocupación STPS. Obligatorias: CURP, apellido paterno, nombre(s) y
+                correo.
               </p>
               <p className="mt-1 text-brand-muted">
-                Opcional: columnas de la Guía V (datos generales) con listas desplegables. La Guía V
-                la llena solo quien sube el Excel; los empleados no la contestan.
+                Opcional: Código ocupación STPS (hoja «Catálogo STPS»; necesario para DC3 / cursos
+                con empresa) y columnas de la Guía V con listas desplegables. La Guía V la llena
+                quien sube el Excel; los empleados no la contestan.
               </p>
               <button
                 type="button"

@@ -5,6 +5,7 @@ import type {
   CompanyAccessInput,
   CompanyAutocompleteItem,
   CompanyCourseAssignResult,
+  CompanyCourseDetail,
   CompanyCourseSummary,
   CompanyDetail,
   CompanyEmployeeImportResult,
@@ -217,6 +218,14 @@ export async function getCompanyCourses(token: string, companyId: string) {
     `/${companyId}/courses`,
     token,
   );
+}
+
+export async function getCompanyCourseDetail(
+  token: string,
+  companyId: string,
+  courseId: string,
+) {
+  return request<CompanyCourseDetail>(`/${companyId}/courses/${courseId}`, token);
 }
 
 export async function assignCompanyCourse(

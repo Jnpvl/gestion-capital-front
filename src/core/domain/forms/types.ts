@@ -211,16 +211,15 @@ export interface FormResultSummary {
 }
 
 /**
- * Colores por nivel de riesgo, tomados de las celdas de las tablas de resultados de las
- * Guías II y III (docx oficiales): Muy alto FF0000, Alto FFC000, Medio FFFF00,
- * Bajo 6BF56E, Nulo 9BE5F7. Texto oscuro para buen contraste en todos.
+ * Semáforo NOM-035 (Guías II y III):
+ * Nulo #04B6D4 · Bajo #22C45F · Medio #EBB308 · Alto #FA7317 · Muy alto #EF4545.
  */
 export const RISK_LEVEL_COLOR: Record<RiskLevel, { background: string; color: string }> = {
-  muy_alto: { background: "#FF0000", color: "#111827" },
-  alto: { background: "#FFC000", color: "#111827" },
-  medio: { background: "#FFFF00", color: "#111827" },
-  bajo: { background: "#6BF56E", color: "#111827" },
-  nulo: { background: "#9BE5F7", color: "#111827" },
+  nulo: { background: "#04B6D4", color: "#111827" },
+  bajo: { background: "#22C45F", color: "#111827" },
+  medio: { background: "#EBB308", color: "#111827" },
+  alto: { background: "#FA7317", color: "#111827" },
+  muy_alto: { background: "#EF4545", color: "#111827" },
 };
 
 /** Guía I: tonos suaves (rojo si requerirá atención clínica, verde si no). */

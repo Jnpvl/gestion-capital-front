@@ -81,6 +81,45 @@ export interface CompanyCourseSummary {
   lastEnrolledAt: string | null;
 }
 
+export interface CompanyCourseMissingEmployee {
+  studentId: string;
+  name: string;
+  email: string;
+  reason: string;
+}
+
+export interface CompanyCourseDetailCourse {
+  id: string;
+  title: string;
+  slug: string;
+  activeCount: number;
+  completedCount: number;
+  employeesTotal: number;
+  deliveryModes: ("online" | "presencial")[];
+}
+
+export interface CompanyCourseDetailEnrollment {
+  id: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  deliveryMode: "online" | "presencial";
+  enrolledAt: string;
+  completed: boolean;
+  progressPercent: number;
+  canDownloadCertificate: boolean;
+  canDownloadDc3: boolean;
+  certificateNumber: string | null;
+  periodLabel: string;
+}
+
+export interface CompanyCourseDetail {
+  companyId: string;
+  course: CompanyCourseDetailCourse;
+  enrollments: CompanyCourseDetailEnrollment[];
+  missing: CompanyCourseMissingEmployee[];
+}
+
 export interface CompanyCourseAssignResult {
   courseId: string;
   courseTitle: string;
