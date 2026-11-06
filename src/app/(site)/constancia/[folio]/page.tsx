@@ -21,6 +21,9 @@ interface PublicConstanciaVerification {
   location: string;
   instructorName: string | null;
   instructorSpecialty: string | null;
+  instructorAceStps: string | null;
+  instructorRenapConocer: string | null;
+  instructorLicense: string | null;
 }
 
 async function fetchConstancia(folio: string): Promise<PublicConstanciaVerification | null> {
@@ -102,12 +105,35 @@ export default async function ConstanciaPublicPage({ params }: ConstanciaPagePro
                 <dd className="mt-1 text-brand-gray">{data.location}</dd>
               </div>
               {data.instructorName && (
-                <div>
-                  <dt className="text-brand-muted">Instructor</dt>
-                  <dd className="mt-1 text-brand-gray">
-                    {data.instructorName}
-                    {data.instructorSpecialty ? ` · ${data.instructorSpecialty}` : ""}
-                  </dd>
+                <div className="space-y-3 uppercase">
+                  <div>
+                    <dt className="text-brand-muted normal-case">Instructor</dt>
+                    <dd className="mt-1 text-brand-gray">{data.instructorName}</dd>
+                  </div>
+                  {data.instructorSpecialty && (
+                    <div>
+                      <dt className="text-brand-muted normal-case">Área / especialidad</dt>
+                      <dd className="mt-1 text-brand-gray">{data.instructorSpecialty}</dd>
+                    </div>
+                  )}
+                  {data.instructorAceStps && (
+                    <div>
+                      <dt className="text-brand-muted normal-case">Registro STPS</dt>
+                      <dd className="mt-1 text-brand-gray">{data.instructorAceStps}</dd>
+                    </div>
+                  )}
+                  {data.instructorRenapConocer && (
+                    <div>
+                      <dt className="text-brand-muted normal-case">RENAP CONOCER</dt>
+                      <dd className="mt-1 text-brand-gray">{data.instructorRenapConocer}</dd>
+                    </div>
+                  )}
+                  {data.instructorLicense && (
+                    <div>
+                      <dt className="text-brand-muted normal-case">Cédula profesional</dt>
+                      <dd className="mt-1 text-brand-gray">{data.instructorLicense}</dd>
+                    </div>
+                  )}
                 </div>
               )}
               {data.issuedAt && (
@@ -123,8 +149,11 @@ export default async function ConstanciaPublicPage({ params }: ConstanciaPagePro
             </p>
           )}
 
-          <div className="mt-10 border-t border-brand-line pt-6">
-            <Link href="/" className="text-sm font-medium text-brand-blue hover:underline">
+          <div className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-brand-line pt-6">
+            <Link href="/constancia" className="text-sm font-medium text-brand-blue hover:underline">
+              Buscar otra constancia
+            </Link>
+            <Link href="/" className="text-sm font-medium text-brand-muted hover:text-brand-blue hover:underline">
               Ir a {seoConfig.defaultTitle}
             </Link>
           </div>

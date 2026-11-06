@@ -4,6 +4,8 @@ import type {
   CompaniesListResponse,
   CompanyAccessInput,
   CompanyAutocompleteItem,
+  CompanyCourseAssignResult,
+  CompanyCourseSummary,
   CompanyDetail,
   CompanyEmployeeImportResult,
   CreateCompanyInput,
@@ -208,4 +210,22 @@ export async function previewCompanyEmployeesAccess(
     token,
     { method: "POST", body: JSON.stringify({ ...input, dryRun: true }) },
   );
+}
+
+export async function getCompanyCourses(token: string, companyId: string) {
+  return request<{ companyId: string; courses: CompanyCourseSummary[] }>(
+    `/${companyId}/courses`,
+    token,
+  );
+}
+
+export async function assignCompanyCourse(
+  token: string,
+  companyId: string,
+  input: { courseId: string; deliveryMode: "online" | "presencial" },
+) {
+  return request<CompanyCourseAssignResult>(`/${companyId}/courses/assignments`, token, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }

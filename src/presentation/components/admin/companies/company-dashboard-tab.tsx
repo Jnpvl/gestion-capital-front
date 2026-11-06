@@ -90,7 +90,7 @@ function GuideCell({
 
 /** readOnly: portal de empresa (datos del token de empresa, sin companyId de la URL). */
 export function CompanyDashboardTab(props: { companyId: string; readOnly?: boolean }) {
-  return <Suspense fallback={<p>Cargando dashboard...</p>}><DashboardContent {...props} /></Suspense>;
+  return <Suspense fallback={<p>Cargando NOM-035...</p>}><DashboardContent {...props} /></Suspense>;
 }
 
 function DashboardContent({
@@ -102,21 +102,45 @@ function DashboardContent({
 }) {
   const [data, setData] = useState<CompanyDashboardResponse | null>(null);
   const searchParams = useSearchParams();
+  const currentYear = String(new Date().getFullYear());
+  const [year, setYear] = useState(searchParams.get("nomYear") || currentYear);
   const [view, setView] = useState(searchParams.get("dashboardView") || "general");
   const dashboardUrl = readOnly ? "/empresa" : `/admin/empresas/${companyId}?tab=dashboard`;
-  const returnTo = `${dashboardUrl}${readOnly ? "?" : "&"}dashboardView=${encodeURIComponent(view)}`;
+  const returnTo = `${dashboardUrl}${readOnly ? "?" : "&"}nomYear=${encodeURIComponent(year)}&dashboardView=${encodeURIComponent(view)}`;
   const [open, setOpen] = useState<string | null>(null);
 
   useEffect(() => {
-    (readOnly ? getPortalFormResults() : getCompanyFormResults(companyId))
-      .then(setData)
+    setData(null);
+    (readOnly ? getPortalFormResults(year) : getCompanyFormResults(companyId, year))
+      .then((result) => {
+        setData(result);
+        const years = [...new Set((result.evaluationYears ?? []).map(String))].sort(
+          (a, b) => Number(b) - Number(a),
+        );
+        if (years.length && !years.includes(year)) setYear(years[0]);
+      })
       .catch((err) => {
-        showError(err instanceof Error ? err.message : "Error al cargar el dashboard");
-        setData({ assignedFormKeys: [], employees: [] });
+        showError(err instanceof Error ? err.message : "Error al cargar NOM-035");
+        setData({ evaluationYear: Number(year), evaluationYears: [], assignedFormKeys: [], employees: [] });
       });
-  }, [companyId, readOnly]);
+  }, [companyId, readOnly, year, currentYear]);
 
-  if (!data) return <div className="text-sm text-brand-muted">Cargando dashboard...</div>;
+  if (!data) return <div className="text-sm text-brand-muted">Cargando NOM-035...</div>;
+
+  const yearOptions = Array.from(new Set((data.evaluationYears ?? []).map(String))).sort(
+    (a, b) => Number(b) - Number(a),
+  );
+  const activeYear = yearOptions.includes(year)
+    ? year
+    : yearOptions[0] ?? currentYear;
+
+  if (yearOptions.length === 0) {
+    return (
+      <div className="rounded-2xl border border-brand-line bg-white p-8 text-sm text-brand-muted">
+        Aún no hay evaluaciones NOM-035. Asigna una guía en la pestaña Formularios para empezar.
+      </div>
+    );
+  }
 
   const tabs = [
     { id: "general", label: "Resultados generales" },
@@ -129,7 +153,31 @@ function DashboardContent({
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6">
-    <div className="flex gap-1 overflow-x-auto rounded-2xl border border-brand-line bg-white p-1.5 shadow-sm" role="tablist" aria-label="Vistas del dashboard" onKeyDown={(event) => {
+    {yearOptions.length > 1 && (
+    <div
+      className="flex gap-1 overflow-x-auto rounded-2xl border border-brand-line bg-white p-1.5 shadow-sm"
+      role="tablist"
+      aria-label="Año de evaluación NOM-035"
+    >
+      {yearOptions.map((option) => (
+        <button
+          key={option}
+          type="button"
+          role="tab"
+          aria-selected={activeYear === option}
+          onClick={() => setYear(option)}
+          className={`shrink-0 rounded-xl px-4 py-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue ${
+            activeYear === option
+              ? "bg-brand-gray text-white"
+              : "text-brand-muted hover:bg-brand-light"
+          }`}
+        >
+          {option}
+        </button>
+      ))}
+    </div>
+    )}
+    <div className="flex gap-1 overflow-x-auto rounded-2xl border border-brand-line bg-white p-1.5 shadow-sm" role="tablist" aria-label="Vistas NOM-035" onKeyDown={(event) => {
       const ids = tabs.map(tab => tab.id);
       const index = ids.indexOf(activeView);
       const next = event.key === "ArrowRight" ? (index + 1) % ids.length : event.key === "ArrowLeft" ? (index + ids.length - 1) % ids.length : event.key === "Home" ? 0 : event.key === "End" ? ids.length - 1 : null;

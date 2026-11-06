@@ -95,6 +95,7 @@ export interface FormAssignmentSummary {
   id: string;
   companyId: string;
   formKeys: FormKey[];
+  evaluationYear: number;
   dueAt: string | null;
   createdAt: string;
   employeesTotal: number;
@@ -129,8 +130,10 @@ export interface FormGuideProgress {
 }
 
 export interface CompanyFormsResponse {
+  evaluationYear: number;
+  evaluationYears: number[];
   guideProgress: FormGuideProgress[];
-  /** Guías (I/II/III) ya asignadas a la empresa. */
+  /** Guías (I/II/III) ya asignadas a la empresa en el año seleccionado. */
   assignedFormKeys: FormKey[];
   /** Empleados que ya empezaron cada guía (no se puede desasignar si > 0). */
   guidesInUse: Partial<Record<FormKey, number>>;
@@ -292,6 +295,8 @@ export interface DashboardDemographics {
 }
 
 export interface CompanyDashboardResponse {
+  evaluationYear: number;
+  evaluationYears: number[];
   demographics?: DashboardDemographics;
   assignedFormKeys: FormKey[];
   employees: DashboardEmployee[];
