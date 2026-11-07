@@ -55,13 +55,13 @@ export function listPortalEmployees(params: { search?: string; page?: number; li
   return get<StudentsListResponse>(`/employees?${qs.toString()}`);
 }
 
-export function getPortalEmployeesFormsSummary(studentIds: string[]) {
-  const qs = studentIds.length ? `?studentIds=${encodeURIComponent(studentIds.join(","))}` : "";
+export function getPortalEmployeesFormsSummary(studentIds: string[], year = new Date().getFullYear()) {
+  const qs = `?year=${year}&studentIds=${encodeURIComponent(studentIds.join(","))}`;
   return get<EmployeesFormsSummaryResponse>(`/employees/forms-summary${qs}`);
 }
 
-export function getPortalEmployeeFormDetail(studentId: string, formKey: FormKey) {
-  return get<EmployeeFormDetail>(`/employees/${studentId}/forms/${formKey}`);
+export function getPortalEmployeeFormDetail(studentId: string, formKey: FormKey, year = new Date().getFullYear()) {
+  return get<EmployeeFormDetail>(`/employees/${studentId}/forms/${formKey}?year=${year}`);
 }
 
 export function getPortalForm(key: string) {

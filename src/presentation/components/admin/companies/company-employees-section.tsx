@@ -48,6 +48,7 @@ export function CompanyEmployeesSection({
   readOnly = false,
 }: CompanyEmployeesSectionProps) {
   const companyId = company.id;
+  const [evaluationYear, setEvaluationYear] = useState(new Date().getFullYear());
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [employees, setEmployees] = useState<StudentListItem[]>([]);
@@ -83,9 +84,11 @@ export function CompanyEmployeesSection({
       const ids = result.students.map((s) => s.id);
       if (ids.length === 0) {
         setFormsByStudent({});
-      } else (readOnly ? getPortalEmployeesFormsSummary(ids) : getCompanyEmployeesFormsSummary(companyId, ids))
-        .then((r) => setFormsByStudent(r.employees))
-        .catch(() => setFormsByStudent({}));
+      } else {
+        setFormsByStudent({});
+        const summary = await (readOnly ? getPortalEmployeesFormsSummary(ids, evaluationYear) : getCompanyEmployeesFormsSummary(companyId, ids, evaluationYear));
+        setFormsByStudent(summary.employees);
+      }
       setTotal(result.total);
       setTotalPages(result.totalPages);
     } catch (err) {
@@ -97,7 +100,7 @@ export function CompanyEmployeesSection({
     } finally {
       setIsLoading(false);
     }
-  }, [companyId, debouncedSearch, page, readOnly]);
+  }, [companyId, debouncedSearch, page, readOnly, evaluationYear]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -182,6 +185,18 @@ export function CompanyEmployeesSection({
           <p className="mt-1 text-sm text-brand-muted">
             {readOnly ? "Trabajadores de tu empresa." : "Alumnos vinculados a esta empresa."}
           </p>
+          <p className="mt-2 text-sm font-semibold text-brand-gray">
+            Formularios NOM-035 · Año de evaluación: {evaluationYear}
+          </p>
+          <p className="mt-1 text-xs text-brand-muted">
+            Los estados y respuestas de las guías corresponden al año seleccionado.
+          </p>
+          <select aria-label="Año de evaluación" value={evaluationYear} disabled={isLoading}
+            onChange={(event) => { setPreview(null); setEvaluationYear(Number(event.target.value)); }}
+            className="mt-1.5 block w-full max-w-xs rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm text-brand-gray">
+            {Array.from({ length: new Date().getFullYear() - 2000 + 2 }, (_, index) => new Date().getFullYear() + 1 - index)
+              .map((year) => <option key={year} value={year}>{year}</option>)}
+          </select>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <input
@@ -520,12 +535,13 @@ export function CompanyEmployeesSection({
           companyId={companyId}
           studentId={preview.studentId}
           employeeName={preview.name}
+          evaluationYear={evaluationYear}
           formKey={preview.formKey}
           readOnly={readOnly}
           onClose={() => setPreview(null)}
           onSaved={() => {
             const ids = employees.map((e) => e.id);
-            getCompanyEmployeesFormsSummary(companyId, ids)
+            getCompanyEmployeesFormsSummary(companyId, ids, evaluationYear)
               .then((r) => setFormsByStudent(r.employees))
               .catch(() => undefined);
           }}

@@ -37,6 +37,7 @@ interface EmployeeFormPreviewModalProps {
   onSaved?: () => void;
   /** Portal de empresa: solo ver, sin Editar ni guardar. */
   readOnly?: boolean;
+  evaluationYear?: number;
 }
 
 function answerLabel(form: FormDefinition, q: FormQuestion, value: string | undefined): string {
@@ -77,6 +78,7 @@ export function EmployeeFormPreviewModal({
   onClose,
   onSaved,
   readOnly = false,
+  evaluationYear = new Date().getFullYear(),
 }: EmployeeFormPreviewModalProps) {
   const [form, setForm] = useState<FormDefinition | null>(null);
   const [detail, setDetail] = useState<EmployeeFormDetail | null>(null);
@@ -89,8 +91,8 @@ export function EmployeeFormPreviewModal({
   const load = useCallback(async () => {
     const [f, d] = await Promise.all(
       readOnly
-        ? [getPortalForm(formKey), getPortalEmployeeFormDetail(studentId, formKey)]
-        : [getForm(formKey), getEmployeeFormDetail(companyId, studentId, formKey)],
+        ? [getPortalForm(formKey), getPortalEmployeeFormDetail(studentId, formKey, evaluationYear)]
+        : [getForm(formKey), getEmployeeFormDetail(companyId, studentId, formKey, evaluationYear)],
     );
     setForm(f.form);
     setDetail(d);
@@ -100,7 +102,7 @@ export function EmployeeFormPreviewModal({
       setFieldErrors({});
       setEditing(true);
     }
-  }, [companyId, studentId, formKey, readOnly]);
+  }, [companyId, studentId, formKey, readOnly, evaluationYear]);
 
   useEffect(() => {
     load().catch((err) => setError(err instanceof Error ? err.message : "No se pudo cargar"));
@@ -128,7 +130,7 @@ export function EmployeeFormPreviewModal({
       // Se manda cada pregunta; "" borra el dato.
       const answers: Record<string, string> = {};
       for (const s of form.sections) for (const q of s.questions) answers[q.id] = (draft[q.id] ?? "").trim();
-      const updated = await updateEmployeeForm(companyId, studentId, formKey, answers);
+      const updated = await updateEmployeeForm(companyId, studentId, formKey, answers, evaluationYear);
       setDetail(updated);
       setEditing(false);
       onSaved?.();
