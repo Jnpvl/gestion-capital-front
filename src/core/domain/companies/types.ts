@@ -64,7 +64,7 @@ export interface CompanyEmployeeImportRowResult {
   curp: string;
   name: string;
   email: string;
-  status: "created" | "existing" | "linked" | "error";
+  status: "created" | "existing" | "updated" | "linked" | "error";
   studentId?: string;
   message?: string;
 }
@@ -145,9 +145,12 @@ export interface CompanyEmployeeImportResult {
   totalRows: number;
   created: number;
   existing: number;
+  /** Empleados existentes a los que se les guardó Guía V del año seleccionado. */
+  updated?: number;
   /** Alumnos que existían sin empresa y se vincularon. */
   linked?: number;
   errors: number;
+  evaluationYear?: number | null;
   welcomeEmailSent: boolean;
   rows: CompanyEmployeeImportRowResult[];
 }
