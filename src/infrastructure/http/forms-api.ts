@@ -77,16 +77,16 @@ export function createFormAssignment(
   });
 }
 
-export function getCompanyEmployeesFormsSummary(companyId: string, studentIds: string[]) {
-  const qs = studentIds.length ? `?studentIds=${encodeURIComponent(studentIds.join(","))}` : "";
+export function getCompanyEmployeesFormsSummary(companyId: string, studentIds: string[], year = new Date().getFullYear()) {
+  const qs = `?year=${year}&studentIds=${encodeURIComponent(studentIds.join(","))}`;
   return request<EmployeesFormsSummaryResponse>(
     `/companies/${companyId}/employees/forms-summary${qs}`,
   );
 }
 
-export function getEmployeeFormDetail(companyId: string, studentId: string, formKey: FormKey) {
+export function getEmployeeFormDetail(companyId: string, studentId: string, formKey: FormKey, year = new Date().getFullYear()) {
   return request<EmployeeFormDetail>(
-    `/companies/${companyId}/employees/${studentId}/forms/${formKey}`,
+    `/companies/${companyId}/employees/${studentId}/forms/${formKey}?year=${year}`,
   );
 }
 
@@ -95,9 +95,10 @@ export function updateEmployeeForm(
   studentId: string,
   formKey: FormKey,
   answers: Record<string, string>,
+  year = new Date().getFullYear(),
 ) {
   return request<EmployeeFormDetail>(
-    `/companies/${companyId}/employees/${studentId}/forms/${formKey}`,
+    `/companies/${companyId}/employees/${studentId}/forms/${formKey}?year=${year}`,
     { method: "PUT", body: JSON.stringify({ answers }) },
   );
 }

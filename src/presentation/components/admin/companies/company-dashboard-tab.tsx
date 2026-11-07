@@ -110,24 +110,24 @@ function DashboardContent({
   const [open, setOpen] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     setData(null);
     (readOnly ? getPortalFormResults(year) : getCompanyFormResults(companyId, year))
       .then((result) => {
+        if (cancelled) return;
         setData(result);
-        const years = [...new Set((result.evaluationYears ?? []).map(String))].sort(
-          (a, b) => Number(b) - Number(a),
-        );
-        if (years.length && !years.includes(year)) setYear(years[0]);
       })
       .catch((err) => {
+        if (cancelled) return;
         showError(err instanceof Error ? err.message : "Error al cargar NOM-035");
         setData({ evaluationYear: Number(year), evaluationYears: [], assignedFormKeys: [], employees: [] });
       });
+    return () => { cancelled = true; };
   }, [companyId, readOnly, year, currentYear]);
 
   if (!data) return <div className="text-sm text-brand-muted">Cargando NOM-035...</div>;
 
-  const yearOptions = Array.from(new Set((data.evaluationYears ?? []).map(String))).sort(
+  const yearOptions = Array.from(new Set([year, ...(data.evaluationYears ?? []).map(String)])).sort(
     (a, b) => Number(b) - Number(a),
   );
   const activeYear = yearOptions.includes(year)
@@ -153,30 +153,33 @@ function DashboardContent({
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6">
-    {yearOptions.length > 1 && (
     <div
-      className="flex gap-1 overflow-x-auto rounded-2xl border border-brand-line bg-white p-1.5 shadow-sm"
+      className="flex flex-wrap items-center gap-3 rounded-2xl border border-brand-line bg-white p-1.5 shadow-sm"
       role="tablist"
       aria-label="Año de evaluación NOM-035"
     >
-      {yearOptions.map((option) => (
-        <button
-          key={option}
-          type="button"
-          role="tab"
-          aria-selected={activeYear === option}
-          onClick={() => setYear(option)}
-          className={`shrink-0 rounded-xl px-4 py-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue ${
-            activeYear === option
-              ? "bg-brand-gray text-white"
-              : "text-brand-muted hover:bg-brand-light"
-          }`}
-        >
-          {option}
-        </button>
-      ))}
+      <span className="shrink-0 px-3 text-xs font-semibold uppercase tracking-wide text-brand-muted">
+        Año
+      </span>
+      <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+        {yearOptions.map((option) => (
+          <button
+            key={option}
+            type="button"
+            role="tab"
+            aria-selected={activeYear === option}
+            onClick={() => setYear(option)}
+            className={`shrink-0 rounded-xl px-4 py-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue ${
+              activeYear === option
+                ? "bg-brand-gray text-white"
+                : "text-brand-muted hover:bg-brand-light"
+            }`}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
     </div>
-    )}
     <div className="flex gap-1 overflow-x-auto rounded-2xl border border-brand-line bg-white p-1.5 shadow-sm" role="tablist" aria-label="Vistas NOM-035" onKeyDown={(event) => {
       const ids = tabs.map(tab => tab.id);
       const index = ids.indexOf(activeView);

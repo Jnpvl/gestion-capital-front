@@ -7,6 +7,7 @@ import {
   importCompanyEmployees,
 } from "@/infrastructure/http/companies-api";
 import { showError } from "@/shared/lib/alerts";
+import { getCompanyForms } from "@/infrastructure/http/forms-api";
 
 interface CompanyEmployeesImportModalProps {
   open: boolean;
@@ -35,6 +36,20 @@ export function CompanyEmployeesImportModal({
   const [isImporting, setIsImporting] = useState(false);
   const [result, setResult] = useState<CompanyEmployeeImportResult | null>(null);
   const [sendWelcomeEmail, setSendWelcomeEmail] = useState(false);
+  const [evaluationYear, setEvaluationYear] = useState("");
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from(new Set([
+    ...availableYears, currentYear - 1, currentYear, currentYear + 1,
+  ])).sort((a, b) => b - a);
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    getCompanyForms(companyId).then((data) => {
+      if (!cancelled) setAvailableYears(data.evaluationYears ?? []);
+    }).catch(() => { if (!cancelled) setAvailableYears([]); });
+    return () => { cancelled = true; };
+  }, [open, companyId]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -52,6 +67,7 @@ export function CompanyEmployeesImportModal({
     setFile(null);
     setResult(null);
     setSendWelcomeEmail(false);
+    setEvaluationYear("");
     if (inputRef.current) inputRef.current.value = "";
     onClose();
   }
@@ -71,7 +87,10 @@ export function CompanyEmployeesImportModal({
     if (!file) return;
     setIsImporting(true);
     try {
-      const res = await importCompanyEmployees(companyId, file, { sendWelcomeEmail });
+      const res = await importCompanyEmployees(companyId, file, {
+        sendWelcomeEmail,
+        evaluationYear: evaluationYear ? Number(evaluationYear) : undefined,
+      });
       setResult(res);
       onImported();
     } catch (err) {
@@ -146,6 +165,20 @@ export function CompanyEmployeesImportModal({
               />
             </div>
 
+            <label className="block rounded-xl border border-brand-line p-4 text-sm text-brand-gray">
+              <span className="block font-semibold">Año de evaluación de la Guía V</span>
+              <select value={evaluationYear}
+                disabled={isImporting}
+                onChange={(event) => setEvaluationYear(event.target.value)}
+                className="mt-1.5 block w-full max-w-xs rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm text-brand-gray">
+                <option value="">Selecciona el año</option>
+                {yearOptions.map((year) => <option key={year} value={year}>{year}</option>)}
+              </select>
+              <span className="mt-2 block text-xs text-brand-muted">
+                Obligatorio si el Excel incluye respuestas de Guía V. Todas se guardarán en este año, también para empleados existentes. Déjalo vacío si solo importas empleados.
+              </span>
+            </label>
+
             <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-brand-line p-4 text-sm text-brand-gray">
               <input
                 type="checkbox"
@@ -177,6 +210,7 @@ export function CompanyEmployeesImportModal({
           </div>
         ) : (
           <div className="mt-6 space-y-5">
+            {evaluationYear && <p className="text-sm font-semibold text-brand-gray">Año de Guía V seleccionado: {evaluationYear}</p>}
             <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
               <div className="rounded-xl border border-brand-line p-3">
                 <p className="text-2xl font-bold text-green-700">{result.created}</p>

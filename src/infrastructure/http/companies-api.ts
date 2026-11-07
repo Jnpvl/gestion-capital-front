@@ -145,13 +145,14 @@ export async function downloadCompanyEmployeesTemplate(companyId: string) {
 export async function importCompanyEmployees(
   companyId: string,
   file: File,
-  options: { sendWelcomeEmail?: boolean } = {},
+  options: { sendWelcomeEmail?: boolean; evaluationYear?: number } = {},
 ): Promise<CompanyEmployeeImportResult> {
   const token = authStorage.getToken();
   if (!token) throw new CompaniesApiError("No hay sesión activa", 401);
 
   const formData = new FormData();
   formData.append("sendWelcomeEmail", options.sendWelcomeEmail ? "true" : "false");
+  if (options.evaluationYear !== undefined) formData.append("evaluationYear", String(options.evaluationYear));
   formData.append("file", file);
   const response = await staffFetch(
     `${env.apiUrl}/api/admin/companies/${companyId}/employees/import`,
