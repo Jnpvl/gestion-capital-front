@@ -145,8 +145,8 @@ function DashboardContent({
   const tabs = [
     { id: "general", label: "Resultados generales" },
     { id: "clinical", label: "Guía I · Valoración clínica" },
-    ...(data.assignedFormKeys.includes("nom035_guia2") ? [{ id: "psychosocial2", label: "Riesgo psicosocial II" }] : []),
-    ...(data.assignedFormKeys.includes("nom035_guia3") ? [{ id: "psychosocial3", label: "Riesgo psicosocial III" }] : []),
+    { id: "psychosocial2", label: "Riesgo psicosocial II" },
+    { id: "psychosocial3", label: "Riesgo psicosocial III" },
     { id: "demographics", label: "Guía V · Perfil de trabajadores" },
   ];
   const activeView = tabs.some(tab => tab.id === view) ? view : "general";
@@ -192,12 +192,12 @@ function DashboardContent({
     }}>
       {tabs.map(tab => <button key={tab.id} id={`dashboard-view-${tab.id}`} type="button" role="tab" aria-selected={activeView === tab.id} aria-controls={`dashboard-panel-${tab.id}`} tabIndex={activeView === tab.id ? 0 : -1} onClick={() => setView(tab.id)} className={`shrink-0 rounded-xl px-4 py-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue ${activeView === tab.id ? "bg-brand-blue text-white" : "text-brand-muted hover:bg-brand-light"}`}>{tab.label}</button>)}
     </div>
-    {data.assignedFormKeys.includes("nom035_guia2") && <div id="dashboard-panel-psychosocial2" role="tabpanel" aria-labelledby="dashboard-view-psychosocial2" hidden={activeView !== "psychosocial2"}>
+    <div id="dashboard-panel-psychosocial2" role="tabpanel" aria-labelledby="dashboard-view-psychosocial2" hidden={activeView !== "psychosocial2"}>
       <CompanyDashboardCharts data={data} guide="nom035_guia2" readOnly={readOnly} returnTo={returnTo} />
-    </div>}
-    {data.assignedFormKeys.includes("nom035_guia3") && <div id="dashboard-panel-psychosocial3" role="tabpanel" aria-labelledby="dashboard-view-psychosocial3" hidden={activeView !== "psychosocial3"}>
+    </div>
+    <div id="dashboard-panel-psychosocial3" role="tabpanel" aria-labelledby="dashboard-view-psychosocial3" hidden={activeView !== "psychosocial3"}>
       <CompanyDashboardCharts data={data} guide="nom035_guia3" readOnly={readOnly} returnTo={returnTo} />
-    </div>}
+    </div>
     <div id="dashboard-panel-clinical" role="tabpanel" aria-labelledby="dashboard-view-clinical" hidden={activeView !== "clinical"}>
       <CompanyDashboardClinical data={data} readOnly={readOnly} returnTo={returnTo} />
     </div>
