@@ -76,7 +76,22 @@ export function CompanyDashboardDemographics({ data, employees, readOnly, return
                     return employeeLevel === level;
                   }).map(employee => ({ studentId: employee.studentId, name: employee.employeeName })),
                 }))}/></div>
-              </> : <div className="mt-2 h-1 overflow-hidden rounded-full bg-brand-light" aria-hidden="true"><div className="h-full rounded-full" style={{ width: `${percentage}%`, background: section.color }} /></div>}
+              </> : <>
+                <p className="mt-3 text-[11px] font-semibold text-brand-muted">Sin evaluación de riesgo disponible · {group.count} personas en este grupo</p>
+                <div className="mt-3"><EmployeeRiskBar
+                  label={`${field.name} · ${group.name} · Sin evaluación de riesgo`}
+                  readOnly={readOnly}
+                  returnTo={returnTo}
+                  segments={[{
+                    key: "sin_resultado",
+                    label: "Sin evaluación de riesgo disponible en este año",
+                    color: riskColor("sin_resultado"),
+                    count: group.count,
+                    people: employees.filter(employee => group.studentIds?.includes(employee.studentId))
+                      .map(employee => ({ studentId: employee.studentId, name: employee.employeeName })),
+                  }]}
+                /></div>
+              </>}
 
             </div>;
           })}</div></div> : <p className="p-5 text-sm text-brand-muted">Aún no hay respuestas para esta variable.</p>}
