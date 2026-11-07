@@ -19,6 +19,7 @@ interface CompanyEmployeesImportModalProps {
 
 const STATUS_LABEL = {
   created: { text: "Creado", className: "bg-green-50 text-green-700" },
+  updated: { text: "Guía V actualizada", className: "bg-emerald-50 text-emerald-800" },
   existing: { text: "Ya existe", className: "bg-brand-light text-brand-muted" },
   linked: { text: "Vinculado", className: "bg-blue-50 text-blue-700" },
   error: { text: "Error", className: "bg-red-50 text-red-700" },
@@ -210,11 +211,19 @@ export function CompanyEmployeesImportModal({
           </div>
         ) : (
           <div className="mt-6 space-y-5">
-            {evaluationYear && <p className="text-sm font-semibold text-brand-gray">Año de Guía V seleccionado: {evaluationYear}</p>}
-            <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+            {(result.evaluationYear ?? evaluationYear) && (
+              <p className="text-sm font-semibold text-brand-gray">
+                Año de Guía V: {result.evaluationYear ?? evaluationYear}
+              </p>
+            )}
+            <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-5">
               <div className="rounded-xl border border-brand-line p-3">
                 <p className="text-2xl font-bold text-green-700">{result.created}</p>
                 <p className="text-xs text-brand-muted">Creados</p>
+              </div>
+              <div className="rounded-xl border border-brand-line p-3">
+                <p className="text-2xl font-bold text-emerald-700">{result.updated ?? 0}</p>
+                <p className="text-xs text-brand-muted">Guía V actualizada</p>
               </div>
               <div className="rounded-xl border border-brand-line p-3">
                 <p className="text-2xl font-bold text-brand-gray">{result.existing}</p>
@@ -229,6 +238,10 @@ export function CompanyEmployeesImportModal({
                 <p className="text-xs text-brand-muted">Con error</p>
               </div>
             </div>
+            <p className="text-xs text-brand-muted">
+              Si el empleado ya estaba en la empresa, no se vuelve a crear: se guarda la Guía V del
+              año seleccionado. Revisa el dashboard filtrando ese mismo año.
+            </p>
 
             <p className="text-xs text-brand-muted">
               {result.welcomeEmailSent
