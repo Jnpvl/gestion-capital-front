@@ -9,9 +9,9 @@ export function AboutSection() {
   return (
     <section aria-labelledby="about-heading" className="bg-white py-20 sm:py-24">
       <Container>
-        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
-          <div className="relative">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-brand-gray">
+        <div className="grid items-stretch gap-12 lg:grid-cols-2 lg:gap-20">
+          <div className="mx-auto w-full max-w-sm lg:mx-0">
+            <div className="relative aspect-[9/16] overflow-hidden rounded-2xl bg-brand-gray">
               {video.src ? (
                 <AboutVideo src={video.src} />
               ) : (
@@ -22,20 +22,27 @@ export function AboutSection() {
             </div>
           </div>
 
-          <div>
-            <SectionLabel>Sobre nosotros</SectionLabel>
-            <h2
-              id="about-heading"
-              className="mt-3 font-display text-3xl font-bold tracking-tight text-brand-gray sm:text-4xl"
-            >
-              {about.title}
-            </h2>
-            <p className="mt-5 text-base leading-relaxed text-brand-muted sm:text-lg">
+          <div className="flex flex-col lg:h-full lg:justify-between lg:py-2">
+            <div>
+              <SectionLabel>Sobre nosotros</SectionLabel>
+              <h2
+                id="about-heading"
+                className="mt-3 font-display text-3xl font-bold tracking-tight text-brand-gray sm:text-4xl"
+              >
+                {about.title}
+              </h2>
+            </div>
+
+            <p className="mt-5 text-base leading-relaxed text-brand-muted sm:text-lg lg:mt-0">
               {about.paragraphs[0]}
             </p>
-            <div className="mt-6 space-y-4 border-t border-brand-line pt-6">
+
+            <div className="mt-6 space-y-5 border-t border-brand-line pt-6 lg:mt-0">
               {about.paragraphs.slice(1).map((paragraph) => (
-                <p key={paragraph.slice(0, 48)} className="text-sm leading-relaxed text-brand-muted sm:text-base">
+                <p
+                  key={paragraph.slice(0, 48)}
+                  className="text-sm leading-relaxed text-brand-muted sm:text-base"
+                >
                   {paragraph}
                 </p>
               ))}

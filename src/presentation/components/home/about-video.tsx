@@ -40,6 +40,8 @@ export function AboutVideo({ src }: AboutVideoProps) {
     void video.play();
   }
 
+  const isMov = src.toLowerCase().endsWith(".mov");
+
   return (
     <video
       ref={videoRef}
@@ -49,7 +51,7 @@ export function AboutVideo({ src }: AboutVideoProps) {
       preload="auto"
       onPlay={handlePlay}
     >
-      <source src={src} type="video/mp4" />
+      <source src={src} type={isMov ? "video/quicktime" : "video/mp4"} />
       Tu navegador no puede reproducir este video.
     </video>
   );

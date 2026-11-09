@@ -5,6 +5,7 @@ export { EventosPageView } from "./eventos-page";
 export { PageCta } from "./page-cta";
 export { PageHero } from "./page-hero";
 export { PageSection } from "./page-section";
+export { Nom035PageView } from "./nom-035-page";
 export { PorQueElegirnosPageView } from "./por-que-elegirnos-page";
 export { QuienesSomosPageView } from "./quienes-somos-page";
 export { ServiciosPageView } from "./servicios-page";
