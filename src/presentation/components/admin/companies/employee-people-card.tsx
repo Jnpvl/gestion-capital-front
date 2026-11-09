@@ -16,6 +16,10 @@ interface EmployeePeopleCardProps {
   readOnly: boolean;
   returnTo: string;
   accent?: boolean;
+  icon?: React.ReactNode;
+  valueColor?: string;
+  badge?: { label: string; color: string; background: string };
+  breakdown?: { label: string; value: number; color: string; background: string }[];
 }
 
 export function EmployeePeopleCard({
@@ -26,6 +30,10 @@ export function EmployeePeopleCard({
   readOnly,
   returnTo,
   accent = false,
+  icon,
+  valueColor,
+  badge,
+  breakdown,
 }: EmployeePeopleCardProps) {
   const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState<{ x: number; y: number; above: boolean } | null>(null);
@@ -72,7 +80,7 @@ export function EmployeePeopleCard({
     });
   }
 
-  const className = `rounded-2xl border p-5 text-left transition-colors ${
+  const className = `flex h-full w-full flex-col rounded-2xl border p-5 text-left transition-colors ${
     accent
       ? "border-brand-blue bg-brand-blue text-white"
       : "border-brand-line bg-white text-brand-gray"
@@ -80,19 +88,44 @@ export function EmployeePeopleCard({
 
   const content = (
     <>
-      <p className="text-xs font-semibold">{label}</p>
-      <p className="mt-3 text-3xl font-bold tabular-nums">{value}</p>
+      <p className="flex items-center gap-2 text-xs font-semibold">{icon}{label}</p>
+      <p className="mt-3 text-3xl font-bold tabular-nums" style={{ color: valueColor }}>{value}</p>
       <p className={`mt-2 text-xs ${accent ? "text-white/75" : "text-brand-muted"}`}>{note}</p>
+      <div className="mt-auto flex min-h-11 flex-col justify-end gap-2 pt-3">
+        {badge ? (
+          <div>
+            <span
+              className="inline-flex rounded-md px-2.5 py-1 text-xs font-semibold"
+              style={{ color: badge.color, background: badge.background }}
+            >
+              {badge.label}
+            </span>
+          </div>
+        ) : null}
+        {breakdown ? (
+          <div className="flex flex-wrap gap-2">
+            {breakdown.map((item) => (
+              <span
+                key={item.label}
+                className="rounded-md px-2.5 py-1 text-xs font-semibold"
+                style={{ color: item.color, background: item.background }}
+              >
+                {item.label}: {item.value}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
     </>
   );
 
   return (
-    <div onKeyDown={(event) => { if (event.key === "Escape") setPreview(null); }}>
+    <div className="h-full" onKeyDown={(event) => { if (event.key === "Escape") setPreview(null); }}>
       {interactive ? (
         <button
           ref={trigger}
           type="button"
-          className={`${className} w-full cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue`}
+          className={`${className} cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue`}
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-describedby={preview ? `${id}-tooltip` : undefined}

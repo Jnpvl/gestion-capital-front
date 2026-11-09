@@ -1,4 +1,5 @@
 import { CompanyDashboardGuide1Responses } from "./company-dashboard-guide1-responses";
+import { DashboardEmployeeLink } from "./dashboard-employee-link";
 import { EmployeePeopleCard } from "./employee-people-card";
 import { EmployeeRiskBar } from "./employee-risk-bar";
 import {
@@ -109,7 +110,7 @@ export function CompanyDashboardClinical({ data, readOnly = false, returnTo }: {
   ];
 
   return <section className="space-y-6" aria-label="Resultados de Guía I">
-    <div><p className="text-xs font-semibold uppercase tracking-widest text-brand-blue">Guía I · {data.evaluationYear}</p><h2 className="mt-1 font-display text-2xl font-bold text-brand-gray">Guía de Referencia I · Resultado</h2><p className="mt-2 text-sm text-brand-muted">Cuestionario para identificar a los trabajadores que fueron sujetos a acontecimientos traumáticos severos. El resultado se expresa conforme a la regla GR.I de la NOM-035-STPS-2018.</p></div>
+    <div><p className="text-xs font-semibold uppercase tracking-widest text-brand-blue">Guía I · {data.evaluationYear}</p><h2 className="mt-1 font-display text-2xl font-bold text-brand-gray">Guía de Referencia I · Resultado</h2></div>
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {cards.map((card) => (
         <EmployeePeopleCard
@@ -145,25 +146,100 @@ export function CompanyDashboardClinical({ data, readOnly = false, returnTo }: {
       </div>
       <div className="rounded-2xl border border-brand-line bg-white p-6">
         <h3 className="font-display font-bold text-brand-gray">Seguimiento de canalización</h3>
-        <p className="mt-2 text-sm text-brand-muted">Sobre las {requires} personas con resultado “{requiresLabel}” en este año.</p>
-        {requires > 0 ? <>
-          <div className="mt-6"><EmployeeRiskBar label="Seguimiento de canalización" readOnly={readOnly} returnTo={returnTo}
-            segments={[
-              { key: "referred", label: "Canalizadas", color: "#16a34a", count: referred.length, people: referred },
-              { key: "pending", label: "Pendientes de canalizar", color: "#d97706", count: pendingReferral.length, people: pendingReferral },
-            ]} /></div>
-          <p className="mt-3 text-sm font-medium text-brand-muted">{format.format(percent(referred.length, requires))}% de avance</p>
-        </> : <p className="flex min-h-40 items-center justify-center text-sm text-brand-muted">{evaluated.length ? "No hay personas pendientes de canalizar." : "Sin evaluaciones completas para calcular pendientes."}</p>}
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <p className="mt-2 text-sm text-brand-muted">
+          Personas con resultado “{requiresLabel}” · revisión para decidir canalización.
+        </p>
+        <div className="mt-5 grid gap-4 sm:grid-cols-3">
           {[
             { label: requiresLabel, count: requires, style: "bg-slate-50 text-slate-700" },
             { label: "Canalizadas", count: referred.length, style: "bg-green-50 text-green-700" },
-            { label: "Pendientes", count: pendingReferral.length, style: "bg-amber-50 text-amber-700" },
-          ].map(item => <div key={item.label} className={`rounded-xl p-4 ${item.style}`}>
-            <p className="text-xs font-semibold">{item.label}</p>
-            <p className="mt-2 text-2xl font-bold tabular-nums">{assigned ? item.count : "—"}</p>
-          </div>)}
+            { label: "Pendientes de canalizar", count: pendingReferral.length, style: "bg-amber-50 text-amber-700" },
+          ].map((item) => (
+            <div key={item.label} className={`rounded-xl p-4 ${item.style}`}>
+              <p className="text-xs font-semibold">{item.label}</p>
+              <p className="mt-2 text-2xl font-bold tabular-nums">{assigned ? item.count : "—"}</p>
+            </div>
+          ))}
         </div>
+        {requires > 0 ? (
+          <>
+            <div className="mt-5">
+              <EmployeeRiskBar
+                label="Seguimiento de canalización"
+                readOnly={readOnly}
+                returnTo={returnTo}
+                segments={[
+                  { key: "referred", label: "Canalizadas", color: "#16a34a", count: referred.length, people: referred },
+                  {
+                    key: "pending",
+                    label: "Pendientes de canalizar",
+                    color: "#d97706",
+                    count: pendingReferral.length,
+                    people: pendingReferral,
+                  },
+                ]}
+              />
+            </div>
+            <p className="mt-3 text-sm font-medium text-brand-muted">
+              {format.format(percent(referred.length, requires))}% de avance
+            </p>
+            <div className="mt-6 overflow-x-auto rounded-xl border border-brand-line">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-brand-light text-brand-muted">
+                  <tr>
+                    {["Empleado", "Resultado", "Estado"].map((label) => (
+                      <th key={label} className="px-4 py-3 font-semibold">
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-brand-line">
+                  {requiresPeople.map((person) => {
+                    const isReferred = referred.some((entry) => entry.studentId === person.studentId);
+                    return (
+                      <tr key={person.studentId}>
+                        <td className="px-4 py-4">
+                          <DashboardEmployeeLink
+                            studentId={person.studentId}
+                            name={person.name}
+                            readOnly={readOnly}
+                            returnTo={returnTo}
+                          />
+                        </td>
+                        <td className="px-4 py-4">
+                          <span
+                            className="rounded-lg px-3 py-1 text-xs font-semibold"
+                            style={CLINICAL_RESULT_COLOR.requires}
+                          >
+                            {requiresLabel}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span
+                            className={`whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold ${
+                              isReferred
+                                ? "bg-green-50 text-green-700"
+                                : "bg-amber-50 text-amber-700"
+                            }`}
+                          >
+                            {isReferred ? "Canalización realizada" : "Pendiente de canalizar"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : (
+          <p className="mt-4 text-sm text-brand-muted">
+            {evaluated.length
+              ? "Sin personas pendientes de revisión por atención clínica."
+              : "Sin resultados disponibles en este año."}
+          </p>
+        )}
       </div>
     </div>
 
