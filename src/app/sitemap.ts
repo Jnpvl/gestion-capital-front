@@ -9,6 +9,7 @@ const routes = [
   "/eventos/suscribete",
   "/contacto",
   "/por-que-elegirnos",
+  "/nom-035",
   "/aviso-de-privacidad",
   "/politicas",
 ];

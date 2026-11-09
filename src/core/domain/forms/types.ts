@@ -16,6 +16,11 @@ export interface FormQuestion {
   /** Número de ítem según la norma (Guías II y III). */
   number?: number;
   text: string;
+  /**
+   * Texto para reportes/resultados cuando el documento lo pide distinto al del cuestionario.
+   * Si no existe, se usa `text`.
+   */
+  resultQuestion?: string;
   /** Por defecto se usa la escala del formulario. */
   kind?: "yesno" | "choice" | "text";
   options?: FormOption[];
@@ -203,6 +208,7 @@ export const RISK_LEVEL_LABEL: Record<RiskLevel, string> = {
 
 /** Resumen del resultado (Guías II/III: nivel y puntos; Guía I: valoración clínica). */
 export interface FormResultSummary {
+  traumaticEventReported?: boolean;
   total?: number;
   level?: RiskLevel;
   requiresClinicalAssessment?: boolean;
@@ -225,12 +231,12 @@ export const RISK_LEVEL_COLOR: Record<RiskLevel, { background: string; color: st
 
 /**
  * Guía I (acontecimiento traumático severo):
- * Rojo si requiere valoración · azul #2E3192 si no requiere.
+ * Rojo si requiere valoración · gris #64748B si no requiere.
  * Texto blanco sobre el color de fondo.
  */
 export const CLINICAL_RESULT_COLOR = {
   requires: { background: "#EF4545", color: "#FFFFFF" },
-  none: { background: "#2E3192", color: "#FFFFFF" },
+  none: { background: "#64748B", color: "#FFFFFF" },
 } as const;
 
 export function clinicalResultColor(requires: boolean): { background: string; color: string } {
@@ -267,6 +273,7 @@ export interface ScoredGroup {
 }
 
 export interface DashboardFormResult {
+  traumaticEventReported?: boolean | null;
   total: number | null;
   level: RiskLevel | null;
   levelLabel: string | null;
@@ -301,10 +308,38 @@ export interface DashboardDemographics {
   fields: { key: string; name: string; answered: number; groups: { name: string; count: number; studentIds?: string[]; risks?: Partial<Record<DemographicRiskGuide, DemographicRiskCounts>> }[] }[];
 }
 
+/** Conteos de “Sí” por pregunta de Guía I, segmentados por sexo (Guía V). */
+export interface Guide1GenderCounts {
+  men: number;
+  women: number;
+  other: number;
+  unspecified: number;
+  total: number;
+}
+
+export interface Guide1QuestionSummary extends Guide1GenderCounts {
+  id: string;
+  text: string;
+}
+
+export interface Guide1SectionSummary {
+  id: string;
+  title: string;
+  instructions: string | null;
+  totalYes: number;
+  questions: Guide1QuestionSummary[];
+}
+
+export interface Guide1ResponseSummary {
+  evaluated: number;
+  sections: Guide1SectionSummary[];
+}
+
 export interface CompanyDashboardResponse {
   evaluationYear: number;
   evaluationYears: number[];
   demographics?: DashboardDemographics;
+  guide1ResponseSummary?: Guide1ResponseSummary | null;
   assignedFormKeys: FormKey[];
   employees: DashboardEmployee[];
 }

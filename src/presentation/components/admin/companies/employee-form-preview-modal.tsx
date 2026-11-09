@@ -283,12 +283,11 @@ export function EmployeeFormPreviewModal({
                             {!readOnly && answerPoints(form, q, detail.answers[q.id]) != null && (
                               <span
                                 className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-brand-blue/10 bg-brand-blue/5 px-2.5 py-1"
-                                aria-label={`Puntaje: ${answerPoints(form, q, detail.answers[q.id])} de 4`}
+                                aria-label={`Puntaje: ${answerPoints(form, q, detail.answers[q.id])}`}
                               >
                                 <span className="text-[10px] font-semibold uppercase tracking-wider text-brand-blue/70">Puntaje</span>
                                 <span className="text-sm font-bold tabular-nums text-brand-blue">
                                   {answerPoints(form, q, detail.answers[q.id])}
-                                  <span className="ml-1 text-[11px] font-normal text-brand-muted">/ 4</span>
                                 </span>
                               </span>
                             )}

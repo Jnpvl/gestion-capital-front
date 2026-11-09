@@ -8,9 +8,9 @@ interface LogoProps {
 }
 
 const sizes = {
-  sm: { width: 148, height: 48, className: "h-9 w-auto" },
-  md: { width: 180, height: 58, className: "h-10 w-auto" },
-  lg: { width: 240, height: 78, className: "h-12 w-auto sm:h-14" },
+  sm: { width: 160, height: 48, className: "h-9 w-auto" },
+  md: { width: 196, height: 59, className: "h-10 w-auto" },
+  lg: { width: 260, height: 79, className: "h-12 w-auto sm:h-14" },
 } as const;
 
 export function Logo({ size = "md", className, priority = false }: LogoProps) {

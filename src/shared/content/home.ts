@@ -77,7 +77,7 @@ export const homeContent = {
     description:
       "Descubre nuestra metodología de acompañamiento en capacitación y consultoría empresarial.",
     /** Video local del sitio: coloca el archivo en public/videos/ (ej. nosotros.mp4) */
-    src: "/videos/nosotros.mp4",
+    src: "/videos/nosotros.mov",
     embedUrl: "",
   },
   partners: {
