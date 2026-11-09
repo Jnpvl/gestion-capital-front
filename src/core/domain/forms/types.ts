@@ -231,12 +231,12 @@ export const RISK_LEVEL_COLOR: Record<RiskLevel, { background: string; color: st
 
 /**
  * Guía I (acontecimiento traumático severo):
- * Rojo si requiere valoración · gris #64748B si no requiere.
- * Texto blanco sobre el color de fondo.
+ * Rojo si requiere valoración · gris #cbd5e1 si no requiere
+ * (mismo tono que “sin evaluación completa” en Guía V).
  */
 export const CLINICAL_RESULT_COLOR = {
   requires: { background: "#EF4545", color: "#FFFFFF" },
-  none: { background: "#64748B", color: "#FFFFFF" },
+  none: { background: "#cbd5e1", color: "#2A2A2E" },
 } as const;
 
 export function clinicalResultColor(requires: boolean): { background: string; color: string } {
@@ -317,9 +317,23 @@ export interface Guide1GenderCounts {
   total: number;
 }
 
+export interface Guide1Person {
+  studentId: string;
+  name: string;
+}
+
+export interface Guide1QuestionPeople {
+  men: Guide1Person[];
+  women: Guide1Person[];
+  other: Guide1Person[];
+  unspecified: Guide1Person[];
+  all: Guide1Person[];
+}
+
 export interface Guide1QuestionSummary extends Guide1GenderCounts {
   id: string;
   text: string;
+  people: Guide1QuestionPeople;
 }
 
 export interface Guide1SectionSummary {
