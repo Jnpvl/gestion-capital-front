@@ -170,6 +170,8 @@ export function CompanyDashboardClinical({ data, readOnly = false, returnTo }: {
     <CompanyDashboardGuide1Responses
       summary={data.guide1ResponseSummary}
       assigned={assigned}
+      readOnly={readOnly}
+      returnTo={returnTo}
     />
   </section>;
 }
