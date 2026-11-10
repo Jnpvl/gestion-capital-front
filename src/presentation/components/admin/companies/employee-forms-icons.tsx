@@ -16,6 +16,7 @@ const STATUS_CLASS: Record<EmployeeFormStatus, string> = {
   partial: "border-amber-500 bg-amber-50 text-amber-700",
   pending: "border-dashed border-brand-line bg-white text-brand-muted",
   not_applied: "border-dashed border-brand-muted/60 bg-white text-brand-muted",
+  not_selected: "border-brand-line bg-slate-100 text-slate-400 opacity-60",
 };
 
 const READONLY_NOT_APPLIED_CLASS = "border-brand-line bg-brand-light text-brand-muted/70";
@@ -26,6 +27,7 @@ export const STATUS_MEANING: Record<EmployeeFormStatus, string> = {
   partial: "Parcial (faltan datos)",
   pending: "Pendiente (sin datos aún)",
   not_applied: "Sin aplicar (el empleado aún no tiene este formulario)",
+  not_selected: "No seleccionado para el muestreo de Guía III",
 };
 
 const NUMERAL: Record<FormKey, string> = {
@@ -92,20 +94,29 @@ export function EmployeeFormsIcons({
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {forms.map((f) => {
+        const disabled = f.status === "not_selected";
         const line = f.status === "completed" ? formResultLine(f.result) : null;
         const title = `${formName(f.formKey)} · ${EMPLOYEE_FORM_STATUS_LABEL[f.status]}${line ? ` · ${line}` : ""}`;
         return (
           <button
             key={f.formKey}
             type="button"
+            disabled={disabled}
             title={tip ? undefined : title}
             aria-label={title}
-            onClick={() => onOpen(f.formKey)}
+            aria-disabled={disabled}
+            onClick={() => {
+              if (!disabled) onOpen(f.formKey);
+            }}
             onMouseEnter={(e) => show(f, e.currentTarget)}
             onMouseLeave={() => setTip(null)}
             onFocus={(e) => show(f, e.currentTarget)}
             onBlur={() => setTip(null)}
-            className={`inline-flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[11px] font-bold transition-opacity hover:opacity-80 ${readOnly && f.status === "not_applied" ? READONLY_NOT_APPLIED_CLASS : STATUS_CLASS[f.status]}`}
+            className={`inline-flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[11px] font-bold transition-opacity ${
+              disabled
+                ? "cursor-not-allowed"
+                : "hover:opacity-80"
+            } ${readOnly && f.status === "not_applied" ? READONLY_NOT_APPLIED_CLASS : STATUS_CLASS[f.status]}`}
           >
             {NUMERAL[f.formKey] ?? "?"}
             {f.status === "not_applied" && !readOnly && <span className="ml-0.5">+</span>}
@@ -131,7 +142,11 @@ export function EmployeeFormsIcons({
               <p className="mt-1 font-semibold">{formResultLine(tip.form.result)}</p>
             )}
             <p className="mt-1.5 text-white/60">
-              {tip.form.status === "not_applied" ? "Clic para aplicar" : "Clic para ver los datos"}
+              {tip.form.status === "not_selected"
+                ? "No aplica en esta evaluación por muestreo"
+                : tip.form.status === "not_applied"
+                  ? "Clic para aplicar"
+                  : "Clic para ver los datos"}
             </p>
           </div>,
           document.body,

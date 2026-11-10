@@ -10,6 +10,7 @@ import type {
   FormKey,
   FormMode,
   FormSummary,
+  GuideSamplingInfo,
 } from "@/core/domain/forms/types";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
 import { env } from "@/shared/config/env";
@@ -67,14 +68,18 @@ export function createFormAssignment(
   input: {
     formKeys: FormKey[];
     modes?: Partial<Record<FormKey, FormMode>>;
+    guia3SamplingMode?: "census" | "sample";
     evaluationYear?: number;
     dueAt?: string | null;
   },
 ) {
-  return request<{ assignment: FormAssignmentSummary }>(`/companies/${companyId}/forms/assignments`, {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
+  return request<{ assignment: FormAssignmentSummary; sampling?: GuideSamplingInfo | null }>(
+    `/companies/${companyId}/forms/assignments`,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export function getCompanyEmployeesFormsSummary(companyId: string, studentIds: string[], year = new Date().getFullYear()) {
@@ -139,20 +144,33 @@ export interface FormImportResult {
   rows: { row: number; employee: string; status: "valid" | "imported" | "skipped" | "error"; message: string }[];
 }
 
-async function excelRequest(companyId: string, key: FormKey, suffix: string, body?: FormData) {
+async function excelRequest(
+  companyId: string,
+  key: FormKey,
+  suffix: string,
+  body?: FormData,
+  year?: number,
+) {
   const token = authStorage.getToken();
   if (!token) throw new FormsApiError("No hay sesión activa", 401);
-  const response = await staffFetch(`${env.apiUrl}/api/admin/companies/${companyId}/forms/${key}/${suffix}`, {
-    method: body ? "POST" : "GET", body, headers: { Authorization: `Bearer ${token}` }, cache: "no-store",
-  });
+  const qs = year != null && !body ? `?year=${encodeURIComponent(String(year))}` : "";
+  const response = await staffFetch(
+    `${env.apiUrl}/api/admin/companies/${companyId}/forms/${key}/${suffix}${qs}`,
+    {
+      method: body ? "POST" : "GET",
+      body,
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    },
+  );
   if (!response.ok) {
     const data = await response.json().catch(() => null);
     throw new FormsApiError(data?.error?.message ?? "No se pudo procesar el Excel", response.status);
   }
   return response;
 }
-export async function downloadFormTemplate(companyId: string, key: FormKey) {
-  const response = await excelRequest(companyId, key, "template");
+export async function downloadFormTemplate(companyId: string, key: FormKey, year?: number) {
+  const response = await excelRequest(companyId, key, "template", undefined, year);
   const url = URL.createObjectURL(await response.blob());
   const anchor = document.createElement("a");
   anchor.href = url;

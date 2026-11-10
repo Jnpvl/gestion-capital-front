@@ -25,9 +25,10 @@ import { AdminPagination } from "@/presentation/components/admin/admin-paginatio
 import { CompanyEmployeesImportModal } from "@/presentation/components/admin/companies/company-employees-import-modal";
 import { EmployeeFormPreviewModal } from "@/presentation/components/admin/companies/employee-form-preview-modal";
 import { EmployeeFormsIcons } from "@/presentation/components/admin/companies/employee-forms-icons";
-import { getCompanyEmployeesFormsSummary } from "@/infrastructure/http/forms-api";
+import { getCompanyEmployeesFormsSummary, getCompanyForms } from "@/infrastructure/http/forms-api";
 import {
   getPortalEmployeesFormsSummary,
+  getPortalFormResults,
   listPortalEmployees,
 } from "@/infrastructure/http/company-portal-api";
 import type { EmployeeFormState, FormKey } from "@/core/domain/forms/types";
@@ -48,7 +49,9 @@ export function CompanyEmployeesSection({
   readOnly = false,
 }: CompanyEmployeesSectionProps) {
   const companyId = company.id;
-  const [evaluationYear, setEvaluationYear] = useState(new Date().getFullYear());
+  const currentYear = new Date().getFullYear();
+  const [evaluationYear, setEvaluationYear] = useState(currentYear);
+  const [evaluationYears, setEvaluationYears] = useState<number[]>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [employees, setEmployees] = useState<StudentListItem[]>([]);
@@ -101,6 +104,20 @@ export function CompanyEmployeesSection({
       setIsLoading(false);
     }
   }, [companyId, debouncedSearch, page, readOnly, evaluationYear]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (readOnly ? getPortalFormResults() : getCompanyForms(companyId))
+      .then((result) => {
+        if (!cancelled) setEvaluationYears(result.evaluationYears ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setEvaluationYears([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, readOnly]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -191,11 +208,31 @@ export function CompanyEmployeesSection({
           <p className="mt-1 text-xs text-brand-muted">
             Los estados y respuestas de las guías corresponden al año seleccionado.
           </p>
-          <select aria-label="Año de evaluación" value={evaluationYear} disabled={isLoading}
-            onChange={(event) => { setPreview(null); setEvaluationYear(Number(event.target.value)); }}
-            className="mt-1.5 block w-full max-w-xs rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm text-brand-gray">
-            {Array.from({ length: new Date().getFullYear() - 2000 + 2 }, (_, index) => new Date().getFullYear() + 1 - index)
-              .map((year) => <option key={year} value={year}>{year}</option>)}
+          <select
+            aria-label="Año de evaluación"
+            value={evaluationYear}
+            disabled={isLoading}
+            onChange={(event) => {
+              setPreview(null);
+              setEvaluationYear(Number(event.target.value));
+            }}
+            className="mt-1.5 block w-full max-w-xs rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm text-brand-gray"
+          >
+            {Array.from(
+              new Set([
+                ...evaluationYears,
+                evaluationYear,
+                currentYear - 1,
+                currentYear,
+                currentYear + 1,
+              ]),
+            )
+              .sort((a, b) => b - a)
+              .map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
           </select>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -557,6 +594,9 @@ export function CompanyEmployeesSection({
           setSearch("");
           setPage(1);
           void loadEmployees();
+          void getCompanyForms(companyId)
+            .then((result) => setEvaluationYears(result.evaluationYears ?? []))
+            .catch(() => undefined);
           onEmployeeCreated?.();
         }}
       />

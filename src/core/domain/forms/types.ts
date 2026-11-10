@@ -122,6 +122,24 @@ export const FORM_MODE_HINT: Record<FormMode, string> = {
   self: "Aparece en el portal del empleado (Mis cursos) para que la conteste.",
 };
 
+export type GuideSamplingMode = "census" | "sample";
+
+export interface GuideSamplingInfo {
+  mode: GuideSamplingMode;
+  populationN: number;
+  sampleN: number;
+  stratumField: string;
+  selectedStudentIds: string[];
+}
+
+export function samplingBadgeLabel(info: GuideSamplingInfo | null | undefined): string | null {
+  if (!info) return null;
+  if (info.mode === "sample") {
+    return `Muestreo · ${info.sampleN} / ${info.populationN} trabajadores`;
+  }
+  return `Censo · ${info.populationN} / ${info.populationN} trabajadores`;
+}
+
 export interface FormGuideProgress {
   formKey: FormKey;
   mode: FormMode;
@@ -132,6 +150,7 @@ export interface FormGuideProgress {
   completed: number;
   partial: number;
   pending: number;
+  sampling?: GuideSamplingInfo | null;
 }
 
 export interface CompanyFormsResponse {
@@ -189,13 +208,19 @@ export const FORM_SHORT_LABEL: Record<FormKey, string> = {
   nom035_guia5: "Guía V",
 };
 
-export type EmployeeFormStatus = "completed" | "partial" | "pending" | "not_applied";
+export type EmployeeFormStatus =
+  | "completed"
+  | "partial"
+  | "pending"
+  | "not_applied"
+  | "not_selected";
 
 export const EMPLOYEE_FORM_STATUS_LABEL: Record<EmployeeFormStatus, string> = {
   completed: "Completa",
   partial: "Parcial",
   pending: "Pendiente",
   not_applied: "Sin aplicar",
+  not_selected: "No seleccionado (muestreo)",
 };
 
 export const RISK_LEVEL_LABEL: Record<RiskLevel, string> = {
@@ -355,6 +380,9 @@ export interface CompanyDashboardResponse {
   demographics?: DashboardDemographics;
   guide1ResponseSummary?: Guide1ResponseSummary | null;
   assignedFormKeys: FormKey[];
+  sampling?: {
+    nom035_guia3?: GuideSamplingInfo | null;
+  };
   employees: DashboardEmployee[];
 }
 

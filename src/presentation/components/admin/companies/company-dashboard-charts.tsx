@@ -26,7 +26,7 @@ const pct = (n: number, total: number) => total ? n / total * 100 : 0;
 
 /**
  * Cutoffs Guía III (DOF) para C_cat y C_dom.
- * Usados en la barra de puntaje total (mismo criterio que Guía II).
+ * Usados en la barra de puntaje promedio (mismo criterio que Guía II).
  */
 const GUIA3_CUTOFFS: Record<string, number[]> = {
   ambiente: [5, 9, 11, 14],
@@ -111,26 +111,29 @@ function cutoffRangeLabel(cutoffs: number[], level: RiskLevel): string {
 }
 
 /**
- * Color según tablas NOM (C_cat / C_dom) con el puntaje total mostrado.
- * Ej. Ambiente: C ≥ 9 → muy alto; si pts totales = 108 → muy alto.
+ * Color según tablas NOM (C_cat / C_dom) con el promedio por persona.
+ * Misma tabla que antes; C = sumatoria / evaluados.
  */
 function TotalPointsBar({
   label,
   sum,
+  count,
   cutoffs,
 }: {
   label: string;
   sum: number;
+  count: number;
   cutoffs: number[];
 }) {
-  const level = riskLevelFrom(sum, cutoffs);
+  const average = count > 0 ? sum / count : 0;
+  const level = riskLevelFrom(average, cutoffs);
   const color = RISK_LEVEL_COLOR[level];
   return (
     <div>
       <div
         className="h-6 overflow-hidden rounded-lg"
         role="img"
-        aria-label={`${label}: C=${number.format(sum)} · ${RISK_LEVEL_LABEL[level]}`}
+        aria-label={`${label}: C=${number.format(average)} · ${RISK_LEVEL_LABEL[level]}`}
         style={{ background: color.background }}
       />
       <p className="mt-2 text-xs text-brand-muted">
@@ -140,7 +143,7 @@ function TotalPointsBar({
         />
         Según tabla NOM:{" "}
         <strong className="text-brand-gray">
-          C = {number.format(sum)} → {RISK_LEVEL_LABEL[level]}
+          C = {number.format(average)} → {RISK_LEVEL_LABEL[level]}
         </strong>{" "}
         <span className="tabular-nums">({cutoffRangeLabel(cutoffs, level)})</span>
       </p>
@@ -208,7 +211,7 @@ function Bars({
   guide: "nom035_guia2" | "nom035_guia3";
   readOnly: boolean;
   returnTo: string;
-  /** Destaca cuántos empleados quedaron en cada nivel (además de la sumatoria). */
+  /** Destaca cuántos empleados quedaron en cada nivel (además del promedio). */
   showPeopleDistribution?: boolean;
 }) {
   return (
@@ -227,7 +230,7 @@ function Bars({
       <p className="text-xs text-brand-muted">
         Pasa el cursor o haz clic en el nombre para ver las preguntas contempladas en el cálculo.
         {showPeopleDistribution
-          ? " El color de la primera barra sigue la tabla NOM con el puntaje total; la segunda cuenta empleados por nivel."
+          ? " El color de la primera barra sigue la tabla NOM con el promedio; la segunda cuenta empleados por nivel."
           : null}
       </p>
       {groups.map((g) => {
@@ -235,6 +238,7 @@ function Bars({
         const cutoffs =
           scope?.cutoffs ??
           (guide === "nom035_guia3" ? GUIA3_CUTOFFS[g.key] : undefined);
+        const average = g.count > 0 ? g.sum / g.count : 0;
         const segments = LEVELS.map((level) => ({
           key: level,
           label: RISK_LEVEL_LABEL[level],
@@ -252,8 +256,8 @@ function Bars({
               )}
               <span className="shrink-0 text-right">
                 <span className="block font-semibold tabular-nums text-brand-gray">
-                  {number.format(g.sum)}{" "}
-                  <span className="text-xs font-normal text-brand-muted">pts totales</span>
+                  {number.format(average)}{" "}
+                  <span className="text-xs font-normal text-brand-muted">pts promedio</span>
                 </span>
                 {showPeopleDistribution ? (
                   <span className="mt-0.5 block text-[11px] text-brand-muted">
@@ -264,9 +268,14 @@ function Bars({
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs font-medium text-brand-muted">Puntaje total</p>
+              <p className="text-xs font-medium text-brand-muted">Puntaje promedio</p>
               {cutoffs ? (
-                <TotalPointsBar label={g.name} sum={g.sum} cutoffs={cutoffs} />
+                <TotalPointsBar
+                  label={g.name}
+                  sum={g.sum}
+                  count={g.count}
+                  cutoffs={cutoffs}
+                />
               ) : (
                 <div className="h-6 rounded-lg bg-brand-light" aria-hidden="true" />
               )}
@@ -725,8 +734,7 @@ export function CompanyDashboardCharts({ data, guide, readOnly, returnTo }: { da
       <div className="rounded-2xl border border-brand-line bg-white p-6">
         <h3 className="font-display font-bold text-brand-gray">Nivel de riesgo por categoría</h3>
         <p className="mb-6 mt-1 text-xs text-brand-muted">
-          Sumatoria del puntaje de la categoría, barra de color según ese total, y distribución de
-          empleados por nivel.
+          Promedio del puntaje de la categoría (tabla NOM), y distribución de empleados por nivel.
         </p>
         {categories.length ? (
           <Bars
@@ -752,7 +760,7 @@ export function CompanyDashboardCharts({ data, guide, readOnly, returnTo }: { da
     <div className="rounded-2xl border border-brand-line bg-white p-6">
       <h3 className="font-display font-bold text-brand-gray">Nivel de riesgo por dominio</h3>
       <p className="mb-6 mt-1 text-xs text-brand-muted">
-        Sumatoria del dominio, barra del puntaje total por nivel y distribución de empleados.
+        Promedio del dominio (tabla NOM) y distribución de empleados por nivel.
       </p>
       {domains.length ? (
         <Bars
