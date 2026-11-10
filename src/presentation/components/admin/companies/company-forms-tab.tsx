@@ -33,6 +33,7 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
   const [selected, setSelected] = useState<FormKey[]>([]);
   const [dueAt, setDueAt] = useState("");
   const [modes, setModes] = useState<Partial<Record<FormKey, FormMode>>>({});
+  const [guia3SamplingMode, setGuia3SamplingMode] = useState<"census" | "sample">("census");
   const [isSaving, setIsSaving] = useState(false);
 
   const load = useCallback(async (evaluationYear = year) => {
@@ -108,15 +109,25 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
     if (newKeys.length === 0) return;
     setIsSaving(true);
     try {
-      await createFormAssignment(companyId, {
+      const result = await createFormAssignment(companyId, {
         formKeys: newKeys,
         evaluationYear: year,
         modes: Object.fromEntries(newKeys.map((k) => [k, modes[k] ?? "admin_applied"])),
+        ...(newKeys.includes("nom035_guia3") ? { guia3SamplingMode } : {}),
         dueAt: dueAt ? new Date(`${dueAt}T23:59:59`).toISOString() : null,
       });
       await load(year);
       setDueAt("");
-      showSuccess(`Formularios asignados para ${year}. Aún no se envían correos a los empleados.`);
+      const sample = result.sampling;
+      const sampleNote =
+        sample?.mode === "sample"
+          ? ` Muestreo Guía III: ${sample.sampleN} de ${sample.populationN} trabajadores.`
+          : sample?.mode === "census"
+            ? ` Censo Guía III: ${sample.populationN} trabajadores.`
+            : "";
+      showSuccess(
+        `Formularios asignados para ${year}.${sampleNote} Aún no se envían correos a los empleados.`,
+      );
     } catch (err) {
       showError(err instanceof Error ? err.message : "No se pudo asignar");
     } finally {
@@ -205,10 +216,23 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
                   {assigned ? (
                     <span className="mt-1.5 block text-xs font-medium text-brand-gray">
                       Modo: {FORM_MODE_LABEL[modeOf(form.key) ?? "admin_applied"]}
+                      {form.key === "nom035_guia3" &&
+                        (() => {
+                          const s = data.guideProgress.find((g) => g.formKey === "nom035_guia3")
+                            ?.sampling;
+                          if (!s) return null;
+                          return (
+                            <span className="mt-1 block text-xs font-semibold text-brand-blue">
+                              {s.mode === "sample"
+                                ? `Muestreo · ${s.sampleN} / ${s.populationN} trabajadores`
+                                : `Censo · ${s.populationN} / ${s.populationN} trabajadores`}
+                            </span>
+                          );
+                        })()}
                     </span>
                   ) : (
                     checked && (
-                      <span className="mt-2 block" onClick={(e) => e.preventDefault()}>
+                      <span className="mt-2 block space-y-2" onClick={(e) => e.preventDefault()}>
                         <select
                           aria-label={`Modo de ${form.title}`}
                           value={modes[form.key] ?? "admin_applied"}
@@ -223,9 +247,34 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
                             </option>
                           ))}
                         </select>
-                        <span className="mt-1 block text-xs text-brand-muted">
+                        <span className="block text-xs text-brand-muted">
                           {FORM_MODE_HINT[modes[form.key] ?? "admin_applied"]}
                         </span>
+                        {form.key === "nom035_guia3" && (
+                          <span className="block">
+                            <label className="mb-1 block text-xs font-semibold text-brand-gray">
+                              Universo de aplicación
+                            </label>
+                            <select
+                              aria-label="Censo o muestreo Guía III"
+                              value={guia3SamplingMode}
+                              onChange={(e) =>
+                                setGuia3SamplingMode(e.target.value as "census" | "sample")
+                              }
+                              className="w-full rounded-lg border border-brand-line bg-white px-3 py-2 text-sm outline-none focus:border-brand-blue"
+                            >
+                              <option value="census">Censo (todos los trabajadores)</option>
+                              <option value="sample">
+                                Muestreo representativo (fórmula NOM-035)
+                              </option>
+                            </select>
+                            <span className="mt-1 block text-xs text-brand-muted">
+                              {guia3SamplingMode === "sample"
+                                ? "Calcula n, reparte por sexo (Guía V) y marca seleccionados al azar dentro de cada grupo. Requiere Guía V con sexo."
+                                : "La Guía III se asigna a todos los empleados activos."}
+                            </span>
+                          </span>
+                        )}
                       </span>
                     )
                   )}
@@ -333,6 +382,13 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
                         <span className="mt-0.5 block text-xs text-brand-muted">
                           {data.forms.find((f) => f.key === g.formKey)?.subtitle ?? ""}
                         </span>
+                        {g.sampling && (
+                          <span className="mt-1 inline-flex rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-800 ring-1 ring-sky-200">
+                            {g.sampling.mode === "sample"
+                              ? `Muestreo · ${g.sampling.sampleN} / ${g.sampling.populationN}`
+                              : `Censo · ${g.sampling.populationN} / ${g.sampling.populationN}`}
+                          </span>
+                        )}
                       </td>
                       <td className="whitespace-nowrap px-4 py-4">
                         <span className="rounded-full bg-brand-light px-2.5 py-1 text-xs font-semibold text-brand-gray">

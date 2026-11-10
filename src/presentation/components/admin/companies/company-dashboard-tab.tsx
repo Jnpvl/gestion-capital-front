@@ -12,6 +12,7 @@ import {
   RISK_LEVEL_LABEL,
   clinicalResultColor,
   clinicalResultText,
+  samplingBadgeLabel,
   type CompanyDashboardResponse,
   type DashboardFormCell,
   type FormKey,
@@ -50,6 +51,13 @@ function GuideCell({
 }) {
   if (!cell || cell.status === "not_assigned") {
     return <span className="text-brand-muted">No aplica</span>;
+  }
+  if (cell.status === "not_selected") {
+    return (
+      <span className="text-xs font-medium text-slate-500" title="No seleccionado para el muestreo">
+        No seleccionado para el muestreo
+      </span>
+    );
   }
   const r = cell.result;
   if (!r) {
@@ -122,17 +130,28 @@ function DashboardContent({
         showError(err instanceof Error ? err.message : "Error al cargar NOM-035");
         setData({ evaluationYear: Number(year), evaluationYears: [], assignedFormKeys: [], employees: [] });
       });
-    return () => { cancelled = true; };
-  }, [companyId, readOnly, year, currentYear]);
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId, readOnly, year]);
+
+  // Solo años con evaluación real. Si el seleccionado no existe, ir al más reciente.
+  useEffect(() => {
+    if (!data) return;
+    const options = [...new Set((data.evaluationYears ?? []).map(String))].sort(
+      (a, b) => Number(b) - Number(a),
+    );
+    if (options.length > 0 && !options.includes(year)) {
+      setYear(options[0]);
+    }
+  }, [data, year]);
 
   if (!data) return <div className="text-sm text-brand-muted">Cargando NOM-035...</div>;
 
-  const yearOptions = Array.from(new Set([year, ...(data.evaluationYears ?? []).map(String)])).sort(
+  const yearOptions = Array.from(new Set((data.evaluationYears ?? []).map(String))).sort(
     (a, b) => Number(b) - Number(a),
   );
-  const activeYear = yearOptions.includes(year)
-    ? year
-    : yearOptions[0] ?? currentYear;
+  const activeYear = yearOptions.includes(year) ? year : (yearOptions[0] ?? year);
 
   if (yearOptions.length === 0) {
     return (
@@ -142,14 +161,32 @@ function DashboardContent({
     );
   }
 
+  const assigned = new Set(data.assignedFormKeys ?? []);
+  const hasGuia5 =
+    (data.demographics?.total ?? 0) > 0 ||
+    data.employees.some((employee) => {
+      const status = employee.forms.nom035_guia5?.status;
+      return status === "completed" || status === "partial" || status === "pending";
+    });
   const tabs = [
     { id: "general", label: "Resultados generales" },
-    { id: "clinical", label: "Guía I · Valoración clínica" },
-    { id: "psychosocial2", label: "Riesgo psicosocial II" },
-    { id: "psychosocial3", label: "Riesgo psicosocial III" },
-    { id: "demographics", label: "Guía V · Perfil de trabajadores" },
-  ];
-  const activeView = tabs.some(tab => tab.id === view) ? view : "general";
+    assigned.has("nom035_guia1") && { id: "clinical", label: "Guía I · Valoración clínica" },
+    assigned.has("nom035_guia2") && { id: "psychosocial2", label: "Riesgo psicosocial II" },
+    assigned.has("nom035_guia3") && { id: "psychosocial3", label: "Riesgo psicosocial III" },
+    hasGuia5 && { id: "demographics", label: "Guía V · Perfil de trabajadores" },
+  ].filter(Boolean) as { id: string; label: string }[];
+  const activeView = tabs.some((tab) => tab.id === view) ? view : (tabs[0]?.id ?? "general");
+  const guia3Sampling = data.sampling?.nom035_guia3 ?? null;
+  const samplingBadge = samplingBadgeLabel(guia3Sampling);
+  const guia3ChartData =
+    guia3Sampling?.mode === "sample"
+      ? {
+          ...data,
+          employees: data.employees.filter((employee) =>
+            guia3Sampling.selectedStudentIds.includes(employee.studentId),
+          ),
+        }
+      : data;
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6">
@@ -180,7 +217,11 @@ function DashboardContent({
         ))}
       </div>
     </div>
-    <div className="flex gap-1 overflow-x-auto rounded-2xl border border-brand-line bg-white p-1.5 shadow-sm" role="tablist" aria-label="Vistas NOM-035" onKeyDown={(event) => {
+    <div
+      className="flex items-center gap-2 rounded-2xl border border-brand-line bg-white p-1.5 shadow-sm"
+      role="tablist"
+      aria-label="Vistas NOM-035"
+      onKeyDown={(event) => {
       const ids = tabs.map(tab => tab.id);
       const index = ids.indexOf(activeView);
       const next = event.key === "ArrowRight" ? (index + 1) % ids.length : event.key === "ArrowLeft" ? (index + ids.length - 1) % ids.length : event.key === "Home" ? 0 : event.key === "End" ? ids.length - 1 : null;
@@ -190,13 +231,43 @@ function DashboardContent({
         document.getElementById(`dashboard-view-${ids[next]}`)?.focus();
       }
     }}>
-      {tabs.map(tab => <button key={tab.id} id={`dashboard-view-${tab.id}`} type="button" role="tab" aria-selected={activeView === tab.id} aria-controls={`dashboard-panel-${tab.id}`} tabIndex={activeView === tab.id ? 0 : -1} onClick={() => setView(tab.id)} className={`shrink-0 rounded-xl px-4 py-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue ${activeView === tab.id ? "bg-brand-blue text-white" : "text-brand-muted hover:bg-brand-light"}`}>{tab.label}</button>)}
+      <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            id={`dashboard-view-${tab.id}`}
+            type="button"
+            role="tab"
+            aria-selected={activeView === tab.id}
+            aria-controls={`dashboard-panel-${tab.id}`}
+            tabIndex={activeView === tab.id ? 0 : -1}
+            onClick={() => setView(tab.id)}
+            className={`shrink-0 rounded-xl px-4 py-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue ${
+              activeView === tab.id ? "bg-brand-blue text-white" : "text-brand-muted hover:bg-brand-light"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      {samplingBadge && (
+        <span
+          className={`mr-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${
+            guia3Sampling?.mode === "sample"
+              ? "bg-sky-50 text-sky-800 ring-1 ring-sky-200"
+              : "bg-slate-100 text-slate-700 ring-1 ring-slate-200"
+          }`}
+          title="Universo de la evaluación Guía III / demografía asociada"
+        >
+          {samplingBadge}
+        </span>
+      )}
     </div>
     <div id="dashboard-panel-psychosocial2" role="tabpanel" aria-labelledby="dashboard-view-psychosocial2" hidden={activeView !== "psychosocial2"}>
       <CompanyDashboardCharts data={data} guide="nom035_guia2" readOnly={readOnly} returnTo={returnTo} />
     </div>
     <div id="dashboard-panel-psychosocial3" role="tabpanel" aria-labelledby="dashboard-view-psychosocial3" hidden={activeView !== "psychosocial3"}>
-      <CompanyDashboardCharts data={data} guide="nom035_guia3" readOnly={readOnly} returnTo={returnTo} />
+      <CompanyDashboardCharts data={guia3ChartData} guide="nom035_guia3" readOnly={readOnly} returnTo={returnTo} />
     </div>
     <div id="dashboard-panel-clinical" role="tabpanel" aria-labelledby="dashboard-view-clinical" hidden={activeView !== "clinical"}>
       <CompanyDashboardClinical data={data} readOnly={readOnly} returnTo={returnTo} />
@@ -209,8 +280,8 @@ function DashboardContent({
       <div className="border-b border-brand-line p-6">
         <h2 className="font-display text-lg font-bold text-brand-gray">Resultados generales</h2>
         <p className="mt-1 text-sm text-brand-muted">
-          Vista general por empleado. «No aplica»: la guía no está asignada a la empresa. «N/A»: aún
-          sin resultado. Clic en un resultado de Guía II o III para ver el detalle y la necesidad de acción.
+          Vista general por empleado. Solo se muestran las guías asignadas. «N/A»: aún sin resultado.
+          Clic en un resultado de Guía II o III para ver el detalle y la necesidad de acción.
         </p>
       </div>
       {data.employees.length === 0 ? (
@@ -223,23 +294,30 @@ function DashboardContent({
             <thead>
               <tr className="border-b border-brand-line bg-brand-light/60 text-xs uppercase tracking-wide text-brand-muted">
                 <th className="px-6 py-3.5 font-semibold">Empleado</th>
-                {GUIDES.map((g) => (
+                {GUIDES.filter((g) => assigned.has(g.key)).map((g) => (
                   <th key={g.key} className="px-4 py-3.5 font-semibold">{g.label}</th>
                 ))}
-                <th className="px-6 py-3.5 font-semibold">Guía V</th>
+                {hasGuia5 && <th className="px-6 py-3.5 font-semibold">Guía V</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-line">
               {data.employees.map((e) => {
-                const openKey = GUIDES.find((g) => open === `${e.studentId}:${g.key}`)?.key;
+                const visibleGuides = GUIDES.filter((g) => assigned.has(g.key));
+                const openKey = visibleGuides.find((g) => open === `${e.studentId}:${g.key}`)?.key;
                 const detail = openKey ? e.forms[openKey]?.result : null;
                 const g5 = e.forms.nom035_guia5?.status ?? "pending";
-                const g5Label = EMPLOYEE_FORM_STATUS_LABEL[g5 === "not_applied" || g5 === "not_assigned" ? "pending" : g5];
+                const g5Label =
+                  EMPLOYEE_FORM_STATUS_LABEL[
+                    g5 === "not_applied" || g5 === "not_assigned" || g5 === "not_selected"
+                      ? "pending"
+                      : g5
+                  ];
+                const colSpan = 1 + visibleGuides.length + (hasGuia5 ? 1 : 0);
                 return (
                   <Fragment key={e.studentId}>
                     <tr>
                       <td className="px-6 py-4 font-medium text-brand-gray"><DashboardEmployeeLink studentId={e.studentId} name={e.employeeName} readOnly={readOnly} returnTo={returnTo} /></td>
-                      {GUIDES.map((g) => {
+                      {visibleGuides.map((g) => {
                         const id = `${e.studentId}:${g.key}`;
                         return (
                           <td key={g.key} className="min-w-44 px-4 py-4 align-top">
@@ -251,11 +329,13 @@ function DashboardContent({
                           </td>
                         );
                       })}
-                      <td className="whitespace-nowrap px-6 py-4 text-brand-gray">{g5Label}</td>
+                      {hasGuia5 && (
+                        <td className="whitespace-nowrap px-6 py-4 text-brand-gray">{g5Label}</td>
+                      )}
                     </tr>
                     {detail && (
                       <tr className="bg-brand-light/30">
-                        <td colSpan={5} className="px-6 py-4">
+                        <td colSpan={colSpan} className="px-6 py-4">
                           <p className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
                             {GUIDES.find((g) => g.key === openKey)?.label} · Necesidad de acción
                             {detail.completedAt &&

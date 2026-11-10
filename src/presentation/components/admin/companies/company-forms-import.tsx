@@ -68,17 +68,22 @@ export function CompanyFormsImport({
       </div>
 
       <div className="mt-5 grid items-start gap-4 xl:grid-cols-3">
-        {keys.map((key) => (
+        {keys.filter((key) => assigned.includes(key)).map((key) => (
           <GuideImport
             key={`${importYear}-${key}`}
             companyId={companyId}
             guide={key}
             year={importYear}
-            assigned={assigned.includes(key)}
+            assigned
             onImported={() => onImported(importYear)}
           />
         ))}
       </div>
+      {assigned.length === 0 && (
+        <p className="mt-4 text-sm text-brand-muted">
+          No hay guías asignadas para {importYear}. Asigna una arriba para poder importar respuestas.
+        </p>
+      )}
     </section>
   );
 }
@@ -105,7 +110,7 @@ function GuideImport({
     setBusy("download");
     setError(null);
     try {
-      await downloadFormTemplate(companyId, guide);
+      await downloadFormTemplate(companyId, guide, year);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al descargar");
     } finally {
