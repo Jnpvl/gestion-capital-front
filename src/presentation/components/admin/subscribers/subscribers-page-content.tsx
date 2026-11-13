@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import type { SubscriberListItem, SubscriberStatus } from "@/core/domain/subscribers/types";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
 import {
@@ -27,7 +27,9 @@ export function SubscribersPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCopying, setIsCopying] = useState(false);
 
+  const loadVersion = useRef(0);
   const loadSubscribers = useCallback(async () => {
+    const version = ++loadVersion.current;
     const token = authStorage.getToken();
     if (!token) return;
 
@@ -39,15 +41,17 @@ export function SubscribersPageContent() {
         page,
         limit: PAGE_SIZE,
       });
+      if (version !== loadVersion.current) return;
       setSubscribers(result.subscribers);
       setTotal(result.total);
       setTotalPages(result.totalPages);
     } catch (err) {
+      if (version !== loadVersion.current) return;
       showError(
         err instanceof SubscribersApiError ? err.message : "Error al cargar suscriptores",
       );
     } finally {
-      setIsLoading(false);
+      if (version === loadVersion.current) setIsLoading(false);
     }
   }, [debouncedSearch, page, statusFilter]);
 
@@ -60,7 +64,10 @@ export function SubscribersPageContent() {
   }, [search]);
 
   useEffect(() => {
-    void loadSubscribers();
+    let cancelled = false;
+    const counter = loadVersion;
+    void Promise.resolve().then(() => { if (!cancelled) void loadSubscribers(); });
+    return () => { cancelled = true; counter.current++; };
   }, [loadSubscribers]);
 
   async function handleToggleStatus(subscriber: SubscriberListItem) {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import type {
   CourseEnrollmentListItem,
   EnrollmentDeliveryMode,
@@ -63,25 +63,32 @@ export function CourseStudentsTab({ courseId }: CourseStudentsTabProps) {
   const [exportingKind, setExportingKind] = useState<"constancia" | "dc3" | null>(null);
   const [selectedEnrollmentIds, setSelectedEnrollmentIds] = useState<string[]>([]);
 
+  const loadVersion = useRef(0);
   const loadEnrollments = useCallback(async () => {
+    const version = ++loadVersion.current;
     const token = authStorage.getToken();
     if (!token) return;
 
     setIsLoading(true);
     try {
       const result = await listCourseEnrollments(token, courseId);
+      if (version !== loadVersion.current) return;
       setEnrollments(result.enrollments);
     } catch (err) {
+      if (version !== loadVersion.current) return;
       showError(
         err instanceof CoursesApiError ? err.message : "No se pudieron cargar los alumnos",
       );
     } finally {
-      setIsLoading(false);
+      if (version === loadVersion.current) setIsLoading(false);
     }
   }, [courseId]);
 
   useEffect(() => {
-    void loadEnrollments();
+    let cancelled = false;
+    const counter = loadVersion;
+    void Promise.resolve().then(() => { if (!cancelled) void loadEnrollments(); });
+    return () => { cancelled = true; counter.current++; };
   }, [loadEnrollments]);
 
   const filteredEnrollments = useMemo(() => {

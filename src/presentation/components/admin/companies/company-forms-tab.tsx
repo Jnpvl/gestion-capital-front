@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/presentation/providers/auth-provider";
 import { CompanyFormsImport } from "./company-forms-import";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FORM_MODE_HINT,
   FORM_MODE_LABEL,
@@ -35,13 +35,17 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
   const [modes, setModes] = useState<Partial<Record<FormKey, FormMode>>>({});
   const [guia3SamplingMode, setGuia3SamplingMode] = useState<"census" | "sample">("census");
   const [isSaving, setIsSaving] = useState(false);
+  const loadVersion = useRef(0);
 
   const load = useCallback(async (evaluationYear = year) => {
+    const version = ++loadVersion.current;
     try {
       const result = await getCompanyForms(companyId, evaluationYear);
+      if (version !== loadVersion.current) return null;
       setData(result);
       return result;
     } catch (err) {
+      if (version !== loadVersion.current) return null;
       showError(err instanceof Error ? err.message : "Error al cargar formularios");
       return null;
     }
@@ -49,9 +53,14 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
 
   useEffect(() => {
     // Ya asignadas aparecen marcadas; si no hay ninguna, se proponen las sugeridas.
-    void load(year).then(
-      (r) => r && setSelected(r.assignedFormKeys.length ? r.assignedFormKeys : r.suggestedFormKeys),
-    );
+    let cancelled = false;
+    const counter = loadVersion;
+    void Promise.resolve().then(async () => {
+      if (cancelled) return;
+      const r = await load(year);
+      if (!cancelled && r) setSelected(r.assignedFormKeys.length ? r.assignedFormKeys : r.suggestedFormKeys);
+    });
+    return () => { cancelled = true; counter.current++; };
   }, [load, year]);
 
   if (!data) return <div className="text-sm text-brand-muted">Cargando formularios...</div>;

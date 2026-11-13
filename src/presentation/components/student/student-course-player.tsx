@@ -24,6 +24,7 @@ export function StudentCoursePlayer({ slug }: StudentCoursePlayerProps) {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
     async function loadCourse() {
       const token = studentAuthStorage.getToken();
       if (!token) return;
@@ -33,18 +34,21 @@ export function StudentCoursePlayer({ slug }: StudentCoursePlayerProps) {
           getStudentCourse(token, slug),
           getCourseProgress(token, slug),
         ]);
+        if (cancelled) return;
         setCourse(courseResult.course);
         setProgress(progressResult.progress);
       } catch {
+        if (cancelled) return;
         const message = "No se pudo cargar el curso o no tienes acceso.";
         setError(message);
         showError(message);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
 
     void loadCourse();
+    return () => { cancelled = true; };
   }, [slug]);
 
   const handleSaveProgress = useCallback(

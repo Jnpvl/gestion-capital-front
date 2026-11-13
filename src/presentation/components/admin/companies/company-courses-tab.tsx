@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CourseListItem } from "@/core/domain/courses/types";
 import type {
   CompanyCourseAssignResult,
@@ -18,6 +18,11 @@ import {
   getCompanyCourseDetail,
   getCompanyCourses,
 } from "@/infrastructure/http/companies-api";
+import {
+  CompanyPortalApiError,
+  getPortalCourseDetail,
+  getPortalCourses,
+} from "@/infrastructure/http/company-portal-api";
 import {
   CoursesApiError,
   downloadEnrollmentCertificate,
@@ -43,10 +48,12 @@ export function CompanyCoursesTab({
   companyId,
   companyRfc,
   employeesCount,
+  readOnly = false,
 }: {
   companyId: string;
   companyRfc: string | null;
   employeesCount: number;
+  readOnly?: boolean;
 }) {
   const [courses, setCourses] = useState<CompanyCourseSummary[]>([]);
   const [published, setPublished] = useState<CourseListItem[]>([]);
@@ -64,69 +71,111 @@ export function CompanyCoursesTab({
   const [isMarkingCompleted, setIsMarkingCompleted] = useState(false);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
 
+  const listVersion = useRef(0);
+  const detailVersion = useRef(0);
   const load = useCallback(async () => {
-    const token = authStorage.getToken();
-    if (!token) return;
+    const version = ++listVersion.current;
     setIsLoading(true);
     try {
-      const result = await getCompanyCourses(token, companyId);
-      setCourses(result.courses);
+      if (readOnly) {
+        const result = await getPortalCourses();
+        if (version !== listVersion.current) return;
+        setCourses(result.courses);
+      } else {
+        const token = authStorage.getToken();
+        if (!token) return;
+        const result = await getCompanyCourses(token, companyId);
+        if (version !== listVersion.current) return;
+        setCourses(result.courses);
+      }
     } catch (err) {
-      showError(err instanceof CompaniesApiError ? err.message : "Error al cargar cursos");
+      if (version !== listVersion.current) return;
+      const message =
+        err instanceof CompaniesApiError || err instanceof CompanyPortalApiError
+          ? err.message
+          : "Error al cargar cursos";
+      showError(message);
       setCourses([]);
     } finally {
-      setIsLoading(false);
+      if (version === listVersion.current) setIsLoading(false);
     }
-  }, [companyId]);
+  }, [companyId, readOnly]);
 
   const loadDetail = useCallback(
     async (courseId: string) => {
-      const token = authStorage.getToken();
-      if (!token) return;
+      const version = ++detailVersion.current;
       setDetailLoading(true);
       try {
-        setDetail(await getCompanyCourseDetail(token, companyId, courseId));
+        if (readOnly) {
+          const result = await getPortalCourseDetail(courseId);
+          if (version !== detailVersion.current) return;
+          setDetail(result);
+        } else {
+          const token = authStorage.getToken();
+          if (!token) return;
+          const result = await getCompanyCourseDetail(token, companyId, courseId);
+          if (version !== detailVersion.current) return;
+          setDetail(result);
+        }
         setSelectedEnrollmentIds([]);
       } catch (err) {
-        showError(err instanceof CompaniesApiError ? err.message : "Error al cargar el curso");
+        if (version !== detailVersion.current) return;
+        const message =
+          err instanceof CompaniesApiError || err instanceof CompanyPortalApiError
+            ? err.message
+            : "Error al cargar el curso";
+        showError(message);
         setDetail(null);
         setDetailCourseId(null);
       } finally {
-        setDetailLoading(false);
+        if (version === detailVersion.current) setDetailLoading(false);
       }
     },
-    [companyId],
+    [companyId, readOnly],
   );
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    const counter = listVersion;
+    void Promise.resolve().then(() => { if (!cancelled) void load(); });
+    return () => { cancelled = true; counter.current++; };
   }, [load]);
 
   useEffect(() => {
-    if (!detailCourseId) {
-      setDetail(null);
-      setSelectedEnrollmentIds([]);
-      return;
-    }
-    void loadDetail(detailCourseId);
+    let cancelled = false;
+    const counter = detailVersion;
+    void Promise.resolve().then(() => {
+      if (cancelled) return;
+      if (!detailCourseId) {
+        setDetail(null);
+        setSelectedEnrollmentIds([]);
+        return;
+      }
+      void loadDetail(detailCourseId);
+    });
+    return () => { cancelled = true; counter.current++; };
   }, [detailCourseId, loadDetail]);
 
   useEffect(() => {
-    if (!showAssign) return;
+    if (readOnly || !showAssign) return;
+    let cancelled = false;
     const token = authStorage.getToken();
     if (!token) return;
     void listCourses(token, { status: "published", limit: 50 })
       .then((result) => {
+        if (cancelled) return;
         setPublished(result.courses);
         const first = result.courses[0];
         setSelectedCourseId(first?.id ?? "");
         setDeliveryMode(defaultDeliveryMode(first?.modality));
       })
       .catch((err) => {
+        if (cancelled) return;
         showError(err instanceof CoursesApiError ? err.message : "No se pudieron cargar los cursos");
         setPublished([]);
       });
-  }, [showAssign]);
+    return () => { cancelled = true; };
+  }, [readOnly, showAssign]);
 
   const selectedCourse = useMemo(
     () => published.find((course) => course.id === selectedCourseId) ?? null,
@@ -375,28 +424,30 @@ export function CompanyCoursesTab({
                     {deliveryLabel(detail.course.deliveryModes)}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    disabled={exportingKind !== null || exportableConstancias.length === 0}
-                    onClick={() => void handleBulkExport("constancia")}
-                    className="rounded-xl border border-brand-line px-4 py-2.5 text-sm font-semibold text-brand-gray hover:bg-brand-light disabled:opacity-50"
-                  >
-                    {exportingKind === "constancia"
-                      ? "Exportando…"
-                      : `Exportar constancias (${exportableConstancias.length})`}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={exportingKind !== null || exportableDc3.length === 0}
-                    onClick={() => void handleBulkExport("dc3")}
-                    className="rounded-xl bg-brand-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-blue-light disabled:opacity-50"
-                  >
-                    {exportingKind === "dc3"
-                      ? "Exportando…"
-                      : `Exportar DC3 (${exportableDc3.length})`}
-                  </button>
-                </div>
+                {!readOnly && (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={exportingKind !== null || exportableConstancias.length === 0}
+                      onClick={() => void handleBulkExport("constancia")}
+                      className="rounded-xl border border-brand-line px-4 py-2.5 text-sm font-semibold text-brand-gray hover:bg-brand-light disabled:opacity-50"
+                    >
+                      {exportingKind === "constancia"
+                        ? "Exportando…"
+                        : `Exportar constancias (${exportableConstancias.length})`}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={exportingKind !== null || exportableDc3.length === 0}
+                      onClick={() => void handleBulkExport("dc3")}
+                      className="rounded-xl bg-brand-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-blue-light disabled:opacity-50"
+                    >
+                      {exportingKind === "dc3"
+                        ? "Exportando…"
+                        : `Exportar DC3 (${exportableDc3.length})`}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -406,7 +457,7 @@ export function CompanyCoursesTab({
                   <h3 className="font-display text-lg font-bold text-brand-gray">
                     Empleados asignados ({detail.enrollments.length})
                   </h3>
-                  {completableEnrollments.length > 0 && (
+                  {!readOnly && completableEnrollments.length > 0 && (
                     <p className="mt-1 text-sm text-brand-muted">
                       Selecciona empleados presenciales en curso para marcarlos como terminados.
                       {selectedCompletableCount > 0
@@ -415,7 +466,7 @@ export function CompanyCoursesTab({
                     </p>
                   )}
                 </div>
-                {completableEnrollments.length > 0 && (
+                {!readOnly && completableEnrollments.length > 0 && (
                   <button
                     type="button"
                     disabled={isMarkingCompleted || selectedCompletableCount === 0}
@@ -439,16 +490,18 @@ export function CompanyCoursesTab({
                   <table className="w-full text-left text-sm">
                     <thead>
                       <tr className="border-b border-brand-line bg-brand-light/60 text-xs uppercase tracking-wide text-brand-muted">
-                        <th className="w-10 px-4 py-3.5">
-                          <input
-                            type="checkbox"
-                            aria-label="Seleccionar empleados presenciales pendientes"
-                            checked={allCompletableSelected}
-                            disabled={completableEnrollments.length === 0}
-                            onChange={(event) => toggleAllCompletable(event.target.checked)}
-                            className="size-4 rounded border-brand-line text-brand-blue focus:ring-brand-blue disabled:opacity-40"
-                          />
-                        </th>
+                        {!readOnly && (
+                          <th className="w-10 px-4 py-3.5">
+                            <input
+                              type="checkbox"
+                              aria-label="Seleccionar empleados presenciales pendientes"
+                              checked={allCompletableSelected}
+                              disabled={completableEnrollments.length === 0}
+                              onChange={(event) => toggleAllCompletable(event.target.checked)}
+                              className="size-4 rounded border-brand-line text-brand-blue focus:ring-brand-blue disabled:opacity-40"
+                            />
+                          </th>
+                        )}
                         <th className="px-4 py-3.5 font-semibold">Empleado</th>
                         <th className="px-4 py-3.5 font-semibold">Modalidad</th>
                         <th className="px-4 py-3.5 font-semibold">Progreso</th>
@@ -462,18 +515,20 @@ export function CompanyCoursesTab({
                           enrollment.deliveryMode === "presencial" && !enrollment.completed;
                         return (
                           <tr key={enrollment.id}>
-                            <td className="px-4 py-4">
-                              <input
-                                type="checkbox"
-                                aria-label={`Seleccionar a ${enrollment.studentName}`}
-                                checked={selectedEnrollmentIds.includes(enrollment.id)}
-                                disabled={!canComplete}
-                                onChange={(event) =>
-                                  toggleEnrollmentSelection(enrollment.id, event.target.checked)
-                                }
-                                className="size-4 rounded border-brand-line text-brand-blue focus:ring-brand-blue disabled:opacity-40"
-                              />
-                            </td>
+                            {!readOnly && (
+                              <td className="px-4 py-4">
+                                <input
+                                  type="checkbox"
+                                  aria-label={`Seleccionar a ${enrollment.studentName}`}
+                                  checked={selectedEnrollmentIds.includes(enrollment.id)}
+                                  disabled={!canComplete}
+                                  onChange={(event) =>
+                                    toggleEnrollmentSelection(enrollment.id, event.target.checked)
+                                  }
+                                  className="size-4 rounded border-brand-line text-brand-blue focus:ring-brand-blue disabled:opacity-40"
+                                />
+                              </td>
+                            )}
                             <td className="px-4 py-4">
                               <p className="font-semibold text-brand-gray">{enrollment.studentName}</p>
                               <p className="mt-0.5 text-xs text-brand-muted">
@@ -497,7 +552,7 @@ export function CompanyCoursesTab({
                                     En curso
                                   </span>
                                 )}
-                                {canComplete ? (
+                                {!readOnly && canComplete ? (
                                   <span className="text-[11px] font-medium text-brand-blue">
                                     Selecciona para marcar terminado
                                   </span>
@@ -509,7 +564,20 @@ export function CompanyCoursesTab({
                               </div>
                             </td>
                             <td className="px-6 py-4">
-                              {enrollment.canDownloadCertificate || enrollment.canDownloadDc3 ? (
+                              {readOnly ? (
+                                enrollment.canDownloadCertificate || enrollment.canDownloadDc3 ? (
+                                  <span className="text-xs font-semibold text-green-700">
+                                    {[
+                                      enrollment.canDownloadCertificate ? "Constancia" : null,
+                                      enrollment.canDownloadDc3 ? "DC3" : null,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" · ")}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-brand-muted">Pendiente</span>
+                                )
+                              ) : enrollment.canDownloadCertificate || enrollment.canDownloadDc3 ? (
                                 <div className="flex flex-col items-start gap-1">
                                   {enrollment.canDownloadCertificate && (
                                     <button
@@ -598,28 +666,37 @@ export function CompanyCoursesTab({
           <div>
             <h2 className="font-display text-lg font-bold text-brand-gray">Cursos de la empresa</h2>
             <p className="mt-1 text-sm text-brand-muted">
-              Solo inscripciones <strong className="font-medium text-brand-gray">con empresa</strong>.
-              Haz clic en un curso para ver asignados, quién falta y exportar constancias / DC3.
+              {readOnly
+                ? "Consulta los cursos asignados a tus empleados y el avance de cada uno."
+                : (
+                  <>
+                    Solo inscripciones <strong className="font-medium text-brand-gray">con empresa</strong>.
+                    Haz clic en un curso para ver asignados, quién falta y exportar constancias / DC3.
+                  </>
+                )}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setLastResult(null);
-              setShowAssign(true);
-            }}
-            className="rounded-xl bg-brand-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-blue-light"
-          >
-            Asignar curso a empleados
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={() => {
+                setLastResult(null);
+                setShowAssign(true);
+              }}
+              className="rounded-xl bg-brand-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-blue-light"
+            >
+              Asignar curso a empleados
+            </button>
+          )}
         </div>
 
         {isLoading ? (
           <p className="px-6 py-12 text-center text-sm text-brand-muted">Cargando cursos...</p>
         ) : courses.length === 0 ? (
           <div className="px-6 py-12 text-center text-sm text-brand-muted">
-            Aún no hay cursos asignados con empresa. Usa «Asignar curso a empleados» para dar acceso a
-            todos los trabajadores vinculados.
+            {readOnly
+              ? "Aún no hay cursos asignados a tu empresa."
+              : "Aún no hay cursos asignados con empresa. Usa «Asignar curso a empleados» para dar acceso a todos los trabajadores vinculados."}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -669,7 +746,7 @@ export function CompanyCoursesTab({
         )}
       </div>
 
-      {lastResult && (
+      {!readOnly && lastResult && (
         <div className="rounded-2xl border border-brand-line bg-white p-6">
           <h3 className="font-display text-base font-bold text-brand-gray">
             Resultado: {lastResult.courseTitle}
@@ -697,7 +774,7 @@ export function CompanyCoursesTab({
         </div>
       )}
 
-      {showAssign && (
+      {!readOnly && showAssign && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div aria-hidden className="absolute inset-0 bg-brand-gray/40" />
           <div className="relative w-full max-w-lg rounded-2xl border border-brand-line bg-white p-6 shadow-xl">

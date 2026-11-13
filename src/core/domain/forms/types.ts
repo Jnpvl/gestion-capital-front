@@ -1,5 +1,10 @@
 // Copia de gestion-capital-back/src/shared/forms/types.ts (mantener sincronizado).
-export type FormKey = "nom035_guia1" | "nom035_guia2" | "nom035_guia3" | "nom035_guia5";
+export type FormKey =
+  | "nom035_guia1"
+  | "nom035_guia2"
+  | "nom035_guia3"
+  | "nom035_guia4"
+  | "nom035_guia5";
 
 /** yesno: Sí/No (Guía I y preguntas filtro). frequency: Siempre…Nunca. none: ficha de datos. */
 export type FormScale = "yesno" | "frequency" | "none";
@@ -82,6 +87,8 @@ export interface FormDefinition {
   sections: FormSection[];
   scoring?: FormScoring;
   clinicalRule?: ClinicalRule;
+  /** PDF de referencia (vista previa / descarga). */
+  documentUrl?: string;
 }
 
 export type FormAnswers = Record<string, string>;
@@ -205,6 +212,7 @@ export const FORM_SHORT_LABEL: Record<FormKey, string> = {
   nom035_guia1: "Guía I",
   nom035_guia2: "Guía II",
   nom035_guia3: "Guía III",
+  nom035_guia4: "Guía IV",
   nom035_guia5: "Guía V",
 };
 

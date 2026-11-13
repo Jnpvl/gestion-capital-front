@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { CompanyDetail } from "@/core/domain/companies/types";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
@@ -38,6 +38,7 @@ interface CompanyDetailContentProps {
 export function CompanyDetailContent({ companyId }: CompanyDetailContentProps) {
   const [company, setCompany] = useState<CompanyDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const loadVersion = useRef(0);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -53,6 +54,7 @@ export function CompanyDetailContent({ companyId }: CompanyDetailContentProps) {
   };
 
   const loadCompany = useCallback(async () => {
+    const version = ++loadVersion.current;
     const token = authStorage.getToken();
     if (!token) return;
 
@@ -60,8 +62,10 @@ export function CompanyDetailContent({ companyId }: CompanyDetailContentProps) {
 
     try {
       const result = await getCompany(token, companyId);
+      if (version !== loadVersion.current) return;
       setCompany(result.company);
     } catch (err) {
+      if (version !== loadVersion.current) return;
       showError(
         err instanceof CompaniesApiError
           ? err.message
@@ -69,12 +73,15 @@ export function CompanyDetailContent({ companyId }: CompanyDetailContentProps) {
       );
       setCompany(null);
     } finally {
-      setIsLoading(false);
+      if (version === loadVersion.current) setIsLoading(false);
     }
   }, [companyId]);
 
   useEffect(() => {
-    void loadCompany();
+    let cancelled = false;
+    const counter = loadVersion;
+    void Promise.resolve().then(() => { if (!cancelled) void loadCompany(); });
+    return () => { cancelled = true; counter.current++; };
   }, [loadCompany]);
 
   if (isLoading && !company) {

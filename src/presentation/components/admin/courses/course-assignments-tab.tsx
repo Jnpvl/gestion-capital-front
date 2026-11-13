@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import type { AssignmentSubmissionListItem } from "@/core/domain/courses/assignment";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
 import {
@@ -32,29 +32,36 @@ export function CourseAssignmentsTab({ courseId }: CourseAssignmentsTabProps) {
   const [reviewComment, setReviewComment] = useState("");
   const [isReviewing, setIsReviewing] = useState(false);
 
+  const loadVersion = useRef(0);
   const load = useCallback(async () => {
+    const version = ++loadVersion.current;
     const token = authStorage.getToken();
     if (!token) return;
 
     setIsLoading(true);
     try {
       const { submissions: rows } = await listCourseAssignments(token, courseId, filter);
+      if (version !== loadVersion.current) return;
       setSubmissions(rows);
       setSelectedId((current) => {
         if (current && rows.some((row) => row.id === current)) return current;
         return rows[0]?.id ?? null;
       });
     } catch (error) {
+      if (version !== loadVersion.current) return;
       showError(
         error instanceof CoursesApiError ? error.message : "No se pudieron cargar las tareas",
       );
     } finally {
-      setIsLoading(false);
+      if (version === loadVersion.current) setIsLoading(false);
     }
   }, [courseId, filter]);
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    const counter = loadVersion;
+    void Promise.resolve().then(() => { if (!cancelled) void load(); });
+    return () => { cancelled = true; counter.current++; };
   }, [load]);
 
   const selected = submissions.find((item) => item.id === selectedId) ?? null;

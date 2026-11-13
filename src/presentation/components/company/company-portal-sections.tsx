@@ -1,5 +1,6 @@
 "use client";
 
+import { CompanyCoursesTab } from "@/presentation/components/admin/companies/company-courses-tab";
 import { CompanyDashboardTab } from "@/presentation/components/admin/companies/company-dashboard-tab";
 import { CompanyEmployeesSection } from "@/presentation/components/admin/companies/company-employees-section";
 import { CompanyProfileReadOnly } from "@/presentation/components/admin/companies/company-profile-fields";
@@ -45,6 +46,21 @@ export function CompanyPortalEmployees() {
     <>
       <Title>Empleados</Title>
       <CompanyEmployeesSection company={company} readOnly />
+    </>
+  );
+}
+
+export function CompanyPortalCourses() {
+  const company = usePortalCompany();
+  return (
+    <>
+      <Title>Cursos</Title>
+      <CompanyCoursesTab
+        companyId={company.id}
+        companyRfc={company.rfc}
+        employeesCount={company.workersCount ?? 0}
+        readOnly
+      />
     </>
   );
 }

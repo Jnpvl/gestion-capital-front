@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { isElevatedStaffRole } from "@/core/domain/auth/types";
 import type { CourseDetail, CourseSection } from "@/core/domain/courses/types";
 import { countCourseLessons } from "@/core/domain/courses/types";
@@ -45,7 +45,9 @@ export function CourseEditorContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
 
+  const loadVersion = useRef(0);
   const loadCourse = useCallback(async () => {
+    const version = ++loadVersion.current;
     const token = authStorage.getToken();
     if (!token || !courseId) return;
 
@@ -54,19 +56,24 @@ export function CourseEditorContent() {
 
     try {
       const { course: data } = await getCourse(token, courseId);
+      if (version !== loadVersion.current) return;
       setCourse(data);
     } catch (err) {
+      if (version !== loadVersion.current) return;
       const message =
         err instanceof CoursesApiError ? err.message : "No se pudo cargar el curso";
       setLoadError(message);
       showError(message);
     } finally {
-      setIsLoading(false);
+      if (version === loadVersion.current) setIsLoading(false);
     }
   }, [courseId]);
 
   useEffect(() => {
-    void loadCourse();
+    let cancelled = false;
+    const counter = loadVersion;
+    void Promise.resolve().then(() => { if (!cancelled) void loadCourse(); });
+    return () => { cancelled = true; counter.current++; };
   }, [loadCourse]);
 
   async function handleSaveTemplates(data: Record<string, unknown>) {

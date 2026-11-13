@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import type { StaffListItem } from "@/core/domain/staff/types";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
 import {
@@ -34,7 +34,9 @@ export function StaffPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
 
+  const loadVersion = useRef(0);
   const loadStaff = useCallback(async () => {
+    const version = ++loadVersion.current;
     const token = authStorage.getToken();
     if (!token) return;
 
@@ -49,13 +51,15 @@ export function StaffPageContent() {
         page,
         limit: PAGE_SIZE,
       });
+      if (version !== loadVersion.current) return;
       setStaff(result.staff);
       setTotal(result.total);
       setTotalPages(result.totalPages);
     } catch (err) {
+      if (version !== loadVersion.current) return;
       showError(err instanceof StaffApiError ? err.message : "Error al cargar el staff");
     } finally {
-      setIsLoading(false);
+      if (version === loadVersion.current) setIsLoading(false);
     }
   }, [filter, roleFilter, debouncedSearch, page]);
 
@@ -68,7 +72,10 @@ export function StaffPageContent() {
   }, [search]);
 
   useEffect(() => {
-    void loadStaff();
+    let cancelled = false;
+    const counter = loadVersion;
+    void Promise.resolve().then(() => { if (!cancelled) void loadStaff(); });
+    return () => { cancelled = true; counter.current++; };
   }, [loadStaff]);
 
   async function handleToggleStatus(member: StaffListItem) {
@@ -140,7 +147,7 @@ export function StaffPageContent() {
               onCreated={async (input) => {
                 setShowCreate(false);
                 setPage(1);
-                await loadStaff();
+                if (page === 1) await loadStaff();
                 await showCredentialsCreated({
                   title: "Usuario creado",
                   email: input.email,

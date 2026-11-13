@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { isElevatedStaffRole } from "@/core/domain/auth/types";
 import type { CourseListItem } from "@/core/domain/courses/types";
@@ -40,7 +40,9 @@ export function CoursesPageContent() {
   const [isCreating, setIsCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const loadVersion = useRef(0);
   const loadCourses = useCallback(async () => {
+    const version = ++loadVersion.current;
     const token = authStorage.getToken();
     if (!token) return;
 
@@ -63,13 +65,15 @@ export function CoursesPageContent() {
         page,
         limit: PAGE_SIZE,
       });
+      if (version !== loadVersion.current) return;
       setCourses(result.courses);
       setTotal(result.total);
       setTotalPages(result.totalPages);
     } catch (err) {
+      if (version !== loadVersion.current) return;
       showError(err instanceof CoursesApiError ? err.message : "Error al cargar cursos");
     } finally {
-      setIsLoading(false);
+      if (version === loadVersion.current) setIsLoading(false);
     }
   }, [filter, debouncedSearch, page, instructorFilter, canAssignInstructor]);
 
@@ -82,7 +86,10 @@ export function CoursesPageContent() {
   }, [search]);
 
   useEffect(() => {
-    void loadCourses();
+    let cancelled = false;
+    const counter = loadVersion;
+    void Promise.resolve().then(() => { if (!cancelled) void loadCourses(); });
+    return () => { cancelled = true; counter.current++; };
   }, [loadCourses]);
 
   async function handleCreate(e: React.FormEvent) {

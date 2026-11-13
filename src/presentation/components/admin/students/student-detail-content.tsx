@@ -2,7 +2,7 @@
 
 import { EmployeeBackLink } from "@/presentation/components/employee-back-link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import type { StudentDetail, StudentEnrollment } from "@/core/domain/students/types";
 import { EDUCATION_LEVEL_LABELS, GENDER_LABELS, JOB_TYPE_LABELS, DELIVERY_MODE_LABELS } from "@/core/domain/students/types";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
@@ -53,7 +53,9 @@ export function StudentDetailContent() {
   const [editing, setEditing] = useState(false);
   const [showAssignCourse, setShowAssignCourse] = useState(false);
 
+  const loadVersion = useRef(0);
   const loadStudent = useCallback(async () => {
+    const version = ++loadVersion.current;
     const token = authStorage.getToken();
     if (!token || !params.id) return;
 
@@ -62,20 +64,25 @@ export function StudentDetailContent() {
 
     try {
       const result = await getStudent(token, params.id);
+      if (version !== loadVersion.current) return;
       setStudent(result.student);
       setEnrollments(result.enrollments);
     } catch (err) {
+      if (version !== loadVersion.current) return;
       const message =
         err instanceof StudentsApiError ? err.message : "Error al cargar el alumno";
       setLoadError(message);
       showError(message);
     } finally {
-      setIsLoading(false);
+      if (version === loadVersion.current) setIsLoading(false);
     }
   }, [params.id]);
 
   useEffect(() => {
-    void loadStudent();
+    let cancelled = false;
+    const counter = loadVersion;
+    void Promise.resolve().then(() => { if (!cancelled) void loadStudent(); });
+    return () => { cancelled = true; counter.current++; };
   }, [loadStudent]);
 
   async function handleToggleStatus() {

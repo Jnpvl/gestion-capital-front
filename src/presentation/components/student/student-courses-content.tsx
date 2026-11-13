@@ -20,23 +20,27 @@ export function StudentCoursesContent() {
   const [downloadingDc3Slug, setDownloadingDc3Slug] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     async function loadCourses() {
       const token = studentAuthStorage.getToken();
       if (!token) return;
 
       try {
         const { courses: enrolledCourses } = await listStudentCourses(token);
+        if (cancelled) return;
         setCourses(enrolledCourses);
       } catch {
+        if (cancelled) return;
         const message = "No se pudieron cargar tus cursos. Intenta de nuevo.";
         setLoadError(message);
         showError(message);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
 
     void loadCourses();
+    return () => { cancelled = true; };
   }, []);
 
   async function handleDownloadCertificate(slug: string) {

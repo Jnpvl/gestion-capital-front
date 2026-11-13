@@ -34,6 +34,7 @@ const NUMERAL: Record<FormKey, string> = {
   nom035_guia1: "I",
   nom035_guia2: "II",
   nom035_guia3: "III",
+  nom035_guia4: "IV",
   nom035_guia5: "V",
 };
 
@@ -42,6 +43,7 @@ const FORM_DESCRIPTION: Record<FormKey, string> = {
   nom035_guia1: "Acontecimientos traumáticos severos",
   nom035_guia2: "Factores de riesgo psicosocial",
   nom035_guia3: "Factores de riesgo psicosocial y entorno organizacional",
+  nom035_guia4: "Documento de referencia (PDF)",
   nom035_guia5: "Datos generales del trabajador",
 };
 

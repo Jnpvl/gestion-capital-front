@@ -16,9 +16,10 @@ const COMPANY_NAV: AdminNavSection[] = [
   {
     title: "Mi empresa",
     items: [
-      { label: "NOM-035", href: "/empresa", icon: "dashboard" },
       { label: "Datos generales", href: "/empresa/datos-generales", icon: "companies" },
       { label: "Empleados", href: "/empresa/empleados", icon: "students" },
+      { label: "Cursos", href: "/empresa/cursos", icon: "courses" },
+      { label: "NOM-035", href: "/empresa/nom-035", icon: "forms" },
     ],
   },
 ];
@@ -49,11 +50,15 @@ export function CompanyPortalShell({ children }: { children: React.ReactNode }) 
       router.replace("/empresa/login");
       return;
     }
+    let cancelled = false;
+    const token = companyAuthStorage.getToken();
     getPortalCompany()
-      .then((r) => setCompany(r.company))
+      .then((r) => { if (!cancelled && companyAuthStorage.getToken() === token) setCompany(r.company); })
       .catch(error => {
+        if (cancelled) return;
         if (!(error instanceof CompanyPortalApiError && error.status === 401)) setSessionError(true);
       });
+    return () => { cancelled = true; };
   }, [router, retry]);
 
   if (sessionError) return <SessionLoadError onRetry={() => { setSessionError(false); setRetry(value => value + 1); }} />;
@@ -71,7 +76,7 @@ export function CompanyPortalShell({ children }: { children: React.ReactNode }) 
       <div className="flex h-dvh overflow-hidden bg-brand-light">
         <aside className="hidden h-full w-64 shrink-0 flex-col overflow-hidden border-r border-brand-line bg-white lg:flex">
           <div className="shrink-0 border-b border-brand-line px-5 py-5">
-            <Link href="/empresa">
+            <Link href="/empresa/datos-generales">
               <Logo />
             </Link>
             <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-brand-muted">
@@ -97,7 +102,7 @@ export function CompanyPortalShell({ children }: { children: React.ReactNode }) 
           <header className="shrink-0 border-b border-brand-line bg-white px-4 py-4 lg:px-8">
             <div className="flex items-center justify-between gap-4">
               <div className="lg:hidden">
-                <Link href="/empresa">
+                <Link href="/empresa/datos-generales">
                   <Logo />
                 </Link>
               </div>
