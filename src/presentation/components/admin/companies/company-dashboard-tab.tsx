@@ -1,11 +1,14 @@
 "use client";
 
 import { DashboardEmployeeLink } from "./dashboard-employee-link";
+import { EmployeeRecordNumber } from "./employee-record-number";
 import { useSearchParams } from "next/navigation";
 import { Fragment, Suspense, useEffect, useState } from "react";
+import { CompanyDashboardDemographicFilters } from "./company-dashboard-demographic-filters";
 import { CompanyDashboardDemographics } from "./company-dashboard-demographics";
 import { CompanyDashboardClinical } from "./company-dashboard-clinical";
 import { CompanyDashboardCharts } from "./company-dashboard-charts";
+import { CompanyDashboardGuia4 } from "./company-dashboard-guia4";
 import {
   EMPLOYEE_FORM_STATUS_LABEL,
   RISK_LEVEL_COLOR,
@@ -20,6 +23,10 @@ import {
 import { getCompanyFormResults } from "@/infrastructure/http/forms-api";
 import { getPortalFormResults } from "@/infrastructure/http/company-portal-api";
 import { showError } from "@/shared/lib/alerts";
+import {
+  DEMOGRAPHIC_FILTER_ALL,
+  applyDemographicFilters,
+} from "@/shared/lib/dashboard-demographic-filters";
 import type { RiskLevel } from "@/core/domain/forms/types";
 
 /** Píldora con el color del nivel (colores de las tablas de la NOM-035). */
@@ -113,13 +120,18 @@ function DashboardContent({
   const currentYear = String(new Date().getFullYear());
   const [year, setYear] = useState(searchParams.get("nomYear") || currentYear);
   const [view, setView] = useState(searchParams.get("dashboardView") || "general");
-  const dashboardUrl = readOnly ? "/empresa" : `/admin/empresas/${companyId}?tab=dashboard`;
+  const dashboardUrl = readOnly ? "/empresa/nom-035" : `/admin/empresas/${companyId}?tab=dashboard`;
   const returnTo = `${dashboardUrl}${readOnly ? "?" : "&"}nomYear=${encodeURIComponent(year)}&dashboardView=${encodeURIComponent(view)}`;
   const [open, setOpen] = useState<string | null>(null);
+  const [departamento, setDepartamento] = useState(DEMOGRAPHIC_FILTER_ALL);
+  const [puesto, setPuesto] = useState(DEMOGRAPHIC_FILTER_ALL);
+  const [employeeSearch, setEmployeeSearch] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     setData(null);
+    setDepartamento(DEMOGRAPHIC_FILTER_ALL);
+    setPuesto(DEMOGRAPHIC_FILTER_ALL);
     (readOnly ? getPortalFormResults(year) : getCompanyFormResults(companyId, year))
       .then((result) => {
         if (cancelled) return;
@@ -170,30 +182,38 @@ function DashboardContent({
     });
   const tabs = [
     { id: "general", label: "Resultados generales" },
-    assigned.has("nom035_guia1") && { id: "clinical", label: "Guía I · Valoración clínica" },
-    assigned.has("nom035_guia2") && { id: "psychosocial2", label: "Riesgo psicosocial II" },
-    assigned.has("nom035_guia3") && { id: "psychosocial3", label: "Riesgo psicosocial III" },
-    hasGuia5 && { id: "demographics", label: "Guía V · Perfil de trabajadores" },
+    assigned.has("nom035_guia1") && { id: "clinical", label: "Guía I" },
+    assigned.has("nom035_guia2") && { id: "psychosocial2", label: "Guía II" },
+    assigned.has("nom035_guia3") && { id: "psychosocial3", label: "Guía III" },
+    { id: "guia4", label: "Guía IV" },
+    hasGuia5 && { id: "demographics", label: "Guía V" },
   ].filter(Boolean) as { id: string; label: string }[];
   const activeView = tabs.some((tab) => tab.id === view) ? view : (tabs[0]?.id ?? "general");
   const guia3Sampling = data.sampling?.nom035_guia3 ?? null;
   const samplingBadge = samplingBadgeLabel(guia3Sampling);
+  const filteredData = applyDemographicFilters(data, departamento, puesto, employeeSearch);
+  const generalEmployees = filteredData.employees;
   const guia3ChartData =
     guia3Sampling?.mode === "sample"
       ? {
-          ...data,
-          employees: data.employees.filter((employee) =>
+          ...filteredData,
+          employees: filteredData.employees.filter((employee) =>
             guia3Sampling.selectedStudentIds.includes(employee.studentId),
           ),
         }
-      : data;
+      : filteredData;
+  const showDemographicFilters =
+    activeView === "clinical" ||
+    activeView === "psychosocial2" ||
+    activeView === "psychosocial3" || activeView === "demographics";
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6">
     <div
-      className="flex flex-wrap items-center gap-3 rounded-2xl border border-brand-line bg-white p-1.5 shadow-sm"
+      className={`${activeView === "general" || showDemographicFilters ? "hidden" : "flex"} flex-wrap items-center gap-3 rounded-2xl border border-brand-line bg-white p-1.5 shadow-sm`}
       role="tablist"
       aria-label="Año de evaluación NOM-035"
+      hidden={activeView === "general" || showDemographicFilters}
     >
       <span className="shrink-0 px-3 text-xs font-semibold uppercase tracking-wide text-brand-muted">
         Año
@@ -263,17 +283,51 @@ function DashboardContent({
         </span>
       )}
     </div>
+    {(activeView === "general" || showDemographicFilters) && (
+      <div className="space-y-4 rounded-2xl border border-brand-line bg-white p-4 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-brand-gray">Buscar y filtrar resultados</h3>
+            <p className="mt-1 text-xs text-brand-muted">Departamento y puesto corresponden a la Guía V del año seleccionado.</p>
+          </div>
+          {(employeeSearch || departamento || puesto) && <button type="button"
+            onClick={() => { setEmployeeSearch(""); setDepartamento(DEMOGRAPHIC_FILTER_ALL); setPuesto(DEMOGRAPHIC_FILTER_ALL); }}
+            className="text-sm font-semibold text-brand-blue hover:underline">Limpiar filtros</button>}
+        </div>
+        <div className="grid items-end gap-3 sm:grid-cols-[180px_minmax(0,1fr)]">
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-brand-muted">Año de evaluación</span>
+            <select value={activeYear} onChange={event => setYear(event.target.value)}
+              className="w-full rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm text-brand-gray">
+              {yearOptions.map(option => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-brand-muted">Buscar empleado</span>
+            <input type="search" value={employeeSearch} onChange={event => setEmployeeSearch(event.target.value)}
+              placeholder="Nombre o número de expediente (UUID)"
+              className="w-full rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm outline-none focus:border-brand-blue" />
+          </label>
+        </div>
+        <CompanyDashboardDemographicFilters embedded demographics={data.demographics} employees={data.employees}
+          departamento={departamento} puesto={puesto} onDepartamentoChange={setDepartamento} onPuestoChange={setPuesto} />
+        <p role="status" className="text-xs text-brand-muted">{generalEmployees.length} de {data.employees.length} empleados · Formularios {activeYear}</p>
+      </div>
+    )}
     <div id="dashboard-panel-psychosocial2" role="tabpanel" aria-labelledby="dashboard-view-psychosocial2" hidden={activeView !== "psychosocial2"}>
-      <CompanyDashboardCharts data={data} guide="nom035_guia2" readOnly={readOnly} returnTo={returnTo} />
+      <CompanyDashboardCharts active={activeView === "psychosocial2"} data={filteredData} guide="nom035_guia2" readOnly={readOnly} returnTo={returnTo} />
     </div>
     <div id="dashboard-panel-psychosocial3" role="tabpanel" aria-labelledby="dashboard-view-psychosocial3" hidden={activeView !== "psychosocial3"}>
-      <CompanyDashboardCharts data={guia3ChartData} guide="nom035_guia3" readOnly={readOnly} returnTo={returnTo} />
+      <CompanyDashboardCharts active={activeView === "psychosocial3"} data={guia3ChartData} guide="nom035_guia3" readOnly={readOnly} returnTo={returnTo} />
     </div>
     <div id="dashboard-panel-clinical" role="tabpanel" aria-labelledby="dashboard-view-clinical" hidden={activeView !== "clinical"}>
-      <CompanyDashboardClinical data={data} readOnly={readOnly} returnTo={returnTo} />
+      <CompanyDashboardClinical data={filteredData} readOnly={readOnly} returnTo={returnTo} />
+    </div>
+    <div id="dashboard-panel-guia4" role="tabpanel" aria-labelledby="dashboard-view-guia4" hidden={activeView !== "guia4"}>
+      <CompanyDashboardGuia4 />
     </div>
     <div id="dashboard-panel-demographics" role="tabpanel" aria-labelledby="dashboard-view-demographics" hidden={activeView !== "demographics"}>
-      <CompanyDashboardDemographics data={data.demographics} employees={data.employees} readOnly={readOnly} returnTo={returnTo} />
+      <CompanyDashboardDemographics data={filteredData.demographics} employees={filteredData.employees} readOnly={readOnly} returnTo={returnTo} />
     </div>
     <div id="dashboard-panel-general" role="tabpanel" aria-labelledby="dashboard-view-general" hidden={activeView !== "general"}>
     <div className="rounded-2xl border border-brand-line bg-white">
@@ -284,9 +338,9 @@ function DashboardContent({
           Clic en un resultado de Guía II o III para ver el detalle y la necesidad de acción.
         </p>
       </div>
-      {data.employees.length === 0 ? (
+      {generalEmployees.length === 0 ? (
         <div className="px-6 py-12 text-center text-sm text-brand-muted">
-          Esta empresa aún no tiene empleados.
+          {data.employees.length ? "No hay empleados que coincidan con la búsqueda y los filtros." : "Esta empresa aún no tiene empleados."}
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -301,7 +355,7 @@ function DashboardContent({
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-line">
-              {data.employees.map((e) => {
+              {generalEmployees.map((e) => {
                 const visibleGuides = GUIDES.filter((g) => assigned.has(g.key));
                 const openKey = visibleGuides.find((g) => open === `${e.studentId}:${g.key}`)?.key;
                 const detail = openKey ? e.forms[openKey]?.result : null;
@@ -316,7 +370,10 @@ function DashboardContent({
                 return (
                   <Fragment key={e.studentId}>
                     <tr>
-                      <td className="px-6 py-4 font-medium text-brand-gray"><DashboardEmployeeLink studentId={e.studentId} name={e.employeeName} readOnly={readOnly} returnTo={returnTo} /></td>
+                      <td className="min-w-60 px-6 py-4 align-top font-medium text-brand-gray">
+                        <DashboardEmployeeLink studentId={e.studentId} name={e.employeeName} readOnly={readOnly} returnTo={returnTo} />
+                        <EmployeeRecordNumber id={e.studentId} />
+                      </td>
                       {visibleGuides.map((g) => {
                         const id = `${e.studentId}:${g.key}`;
                         return (

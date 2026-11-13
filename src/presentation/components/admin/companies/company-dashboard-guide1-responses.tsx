@@ -10,12 +10,12 @@ import type {
 
 const format = new Intl.NumberFormat("es-MX");
 
-/** Colores del informe NOM-035 I (segmentación por género). */
+/** Segmentación por género: tonos suaves alineados a la marca. */
 const GENDER_COLORS = {
-  men: "#90B048",
-  women: "#F07030",
-  other: "#F8B830",
-  unspecified: "#10B0D8",
+  men: "#6B6EAE", // azul de marca atenuado
+  women: "#C9A0B0", // rosa suave
+  other: "#8B95A5", // gris de “no requiere valoración”, un tono más oscuro para legibilidad en el header
+  unspecified: "#A89BC4", // morado suave
   total: "#2A2A2E",
 } as const;
 
@@ -39,7 +39,7 @@ function SectionTable({
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[40rem] text-left text-sm">
+      <table className="w-full min-w-160 text-left text-sm">
         <thead className="bg-[#DFE1E6] text-brand-muted">
           <tr>
             <th className="px-6 py-3 font-semibold">Pregunta</th>
@@ -68,7 +68,7 @@ function SectionTable({
                     readOnly={readOnly}
                     returnTo={returnTo}
                     color={segment.color}
-                    className="inline-flex min-w-[2.5rem] justify-center px-2 py-1 font-semibold tabular-nums"
+                    className="inline-flex min-w-10 justify-center px-2 py-1 font-semibold tabular-nums"
                   >
                     <span style={{ color: segment.color }}>
                       {format.format(question[segment.key])}

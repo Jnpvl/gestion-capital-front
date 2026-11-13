@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import type { CompanyListItem } from "@/core/domain/companies/types";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
 import {
@@ -26,7 +26,9 @@ export function CompaniesPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
 
+  const loadVersion = useRef(0);
   const loadCompanies = useCallback(async () => {
+    const version = ++loadVersion.current;
     const token = authStorage.getToken();
     if (!token) return;
 
@@ -38,13 +40,15 @@ export function CompaniesPageContent() {
         page,
         limit: PAGE_SIZE,
       });
+      if (version !== loadVersion.current) return;
       setCompanies(result.companies);
       setTotal(result.total);
       setTotalPages(result.totalPages);
     } catch (err) {
+      if (version !== loadVersion.current) return;
       showError(err instanceof CompaniesApiError ? err.message : "Error al cargar empresas");
     } finally {
-      setIsLoading(false);
+      if (version === loadVersion.current) setIsLoading(false);
     }
   }, [debouncedSearch, page]);
 
@@ -57,7 +61,10 @@ export function CompaniesPageContent() {
   }, [search]);
 
   useEffect(() => {
-    void loadCompanies();
+    let cancelled = false;
+    const counter = loadVersion;
+    void Promise.resolve().then(() => { if (!cancelled) void loadCompanies(); });
+    return () => { cancelled = true; counter.current++; };
   }, [loadCompanies]);
 
   return (
@@ -93,7 +100,7 @@ export function CompaniesPageContent() {
                 await createCompany(token, input);
                 setShowCreate(false);
                 setPage(1);
-                await loadCompanies();
+                if (page === 1) await loadCompanies();
                 showSuccess("Empresa creada correctamente");
               }}
             />

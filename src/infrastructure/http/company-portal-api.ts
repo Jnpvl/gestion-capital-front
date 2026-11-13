@@ -1,6 +1,10 @@
 import { companyFetch } from "./session-fetch";
 import type { ApiErrorBody } from "@/core/domain/auth/types";
-import type { CompanyDetail } from "@/core/domain/companies/types";
+import type {
+  CompanyCourseDetail,
+  CompanyCourseSummary,
+  CompanyDetail,
+} from "@/core/domain/companies/types";
 import type {
   CompanyDashboardResponse,
   EmployeeFormDetail,
@@ -71,6 +75,14 @@ export function getPortalForm(key: string) {
 export function getPortalFormResults(year?: number | string) {
   const qs = year != null ? `?year=${encodeURIComponent(String(year))}` : "";
   return get<CompanyDashboardResponse>(`/forms/results${qs}`);
+}
+
+export function getPortalCourses() {
+  return get<{ companyId: string; courses: CompanyCourseSummary[] }>("/courses");
+}
+
+export function getPortalCourseDetail(courseId: string) {
+  return get<CompanyCourseDetail>(`/courses/${encodeURIComponent(courseId)}`);
 }
 
 export type PortalEmployee = Pick<StudentDetail, "id" | "name" | "paternalLastName" | "maternalLastName" | "firstNames" | "email" | "phone" | "curp" | "gender" | "age" | "residenceLocation" | "educationLevel" | "professionArea" | "educationInstitution" | "currentlyEmployed" | "jobType" | "currentPosition" | "industrySector" | "yearsExperience" | "timeInCurrentPosition" | "stpsOccupationCode" | "stpsOccupationName" | "stpsThematicAreaCode" | "stpsThematicAreaName" | "companyId" | "companyName" | "companyRfc">;

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { EmployeeRecordNumber } from "./employee-record-number";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CompanyDetail } from "@/core/domain/companies/types";
 import type { StudentListItem } from "@/core/domain/students/types";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
@@ -25,14 +26,17 @@ import { AdminPagination } from "@/presentation/components/admin/admin-paginatio
 import { CompanyEmployeesImportModal } from "@/presentation/components/admin/companies/company-employees-import-modal";
 import { EmployeeFormPreviewModal } from "@/presentation/components/admin/companies/employee-form-preview-modal";
 import { EmployeeFormsIcons } from "@/presentation/components/admin/companies/employee-forms-icons";
-import { getCompanyEmployeesFormsSummary, getCompanyForms } from "@/infrastructure/http/forms-api";
+import { getCompanyEmployeesFormsSummary, getCompanyFormResults } from "@/infrastructure/http/forms-api";
 import {
   getPortalEmployeesFormsSummary,
   getPortalFormResults,
   listPortalEmployees,
 } from "@/infrastructure/http/company-portal-api";
-import type { EmployeeFormState, FormKey } from "@/core/domain/forms/types";
+import type { CompanyDashboardResponse, EmployeeFormState, FormKey } from "@/core/domain/forms/types";
 import { StudentStatusBadge } from "@/presentation/components/admin/students/student-status-badge";
+
+import { CompanyDashboardDemographicFilters } from "./company-dashboard-demographic-filters";
+import { resolveDemographicAllowedIds } from "@/shared/lib/dashboard-demographic-filters";
 
 const PAGE_SIZE = 10;
 
@@ -52,6 +56,18 @@ export function CompanyEmployeesSection({
   const currentYear = new Date().getFullYear();
   const [evaluationYear, setEvaluationYear] = useState(currentYear);
   const [evaluationYears, setEvaluationYears] = useState<number[]>([]);
+  const [demographicData, setDemographicData] = useState<CompanyDashboardResponse | null>(null);
+  const [departamento, setDepartamento] = useState("");
+  const [puesto, setPuesto] = useState("");
+  const requestVersion = useRef(0);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const filteredListCache = useRef<{ key: string; students: StudentListItem[] } | null>(null);
+  const refreshData = () => {
+    filteredListCache.current = null;
+    setDemographicData(null);
+    setRefreshVersion(value => value + 1);
+  };
+  const hasDemographicFilter = Boolean(departamento || puesto);
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [employees, setEmployees] = useState<StudentListItem[]>([]);
@@ -65,6 +81,12 @@ export function CompanyEmployeesSection({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [allSelected, setAllSelected] = useState(false);
   const [sendingAccess, setSendingAccess] = useState(false);
+  const changeDepartamento = useCallback((value: string) => {
+    setDepartamento(value); setPage(1); setSelected(new Set()); setAllSelected(false);
+  }, []);
+  const changePuesto = useCallback((value: string) => {
+    setPuesto(value); setPage(1); setSelected(new Set()); setAllSelected(false);
+  }, []);
   const [formsByStudent, setFormsByStudent] = useState<Record<string, EmployeeFormState[]>>({});
   const [preview, setPreview] = useState<{
     studentId: string;
@@ -73,16 +95,35 @@ export function CompanyEmployeesSection({
   } | null>(null);
 
   const loadEmployees = useCallback(async () => {
+    if (!demographicData) return;
     const token = readOnly ? null : authStorage.getToken();
     if (!readOnly && !token) return;
 
+    const version = ++requestVersion.current;
     setIsLoading(true);
 
     try {
-      const params = { search: debouncedSearch || undefined, page, limit: PAGE_SIZE };
-      const result = readOnly
-        ? await listPortalEmployees(params)
-        : await listStudents(token as string, { companyId, ...params });
+      const fetchPage = (requestedPage: number, limit: number) => {
+        const params = { search: debouncedSearch || undefined, page: requestedPage, limit };
+        return readOnly ? listPortalEmployees(params) : listStudents(token as string, { companyId, ...params });
+      };
+      const cacheKey = JSON.stringify([companyId, readOnly, token, debouncedSearch, refreshVersion]);
+      const cached = hasDemographicFilter && filteredListCache.current?.key === cacheKey ? filteredListCache.current.students : null;
+      let result = cached ? { students: cached, total: cached.length, totalPages: 1, page: 1, limit: 50 } : await fetchPage(hasDemographicFilter ? 1 : page, hasDemographicFilter ? 50 : PAGE_SIZE);
+      if (hasDemographicFilter) {
+        if (!demographicData) return;
+        const allowed = resolveDemographicAllowedIds(demographicData.demographics, demographicData.employees, departamento, puesto);
+        const all = [...result.students];
+        for (let next = 2; next <= result.totalPages; next++) {
+          if (version !== requestVersion.current) return;
+          all.push(...(await fetchPage(next, 50)).students);
+        }
+        if (version !== requestVersion.current) return;
+        filteredListCache.current = { key: cacheKey, students: all };
+        const matching = all.filter(employee => allowed?.has(employee.id));
+        result = { ...result, students: matching.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), total: matching.length, totalPages: Math.max(1, Math.ceil(matching.length / PAGE_SIZE)) };
+      }
+      if (version !== requestVersion.current) return;
       setEmployees(result.students);
       const ids = result.students.map((s) => s.id);
       if (ids.length === 0) {
@@ -90,34 +131,36 @@ export function CompanyEmployeesSection({
       } else {
         setFormsByStudent({});
         const summary = await (readOnly ? getPortalEmployeesFormsSummary(ids, evaluationYear) : getCompanyEmployeesFormsSummary(companyId, ids, evaluationYear));
+        if (version !== requestVersion.current) return;
         setFormsByStudent(summary.employees);
       }
       setTotal(result.total);
       setTotalPages(result.totalPages);
     } catch (err) {
+      if (version !== requestVersion.current) return;
       showError(
         err instanceof StudentsApiError || readOnly
           ? (err as Error).message
           : "Error al cargar empleados",
       );
     } finally {
-      setIsLoading(false);
+      if (version === requestVersion.current) setIsLoading(false);
     }
-  }, [companyId, debouncedSearch, page, readOnly, evaluationYear]);
+  }, [companyId, debouncedSearch, page, readOnly, evaluationYear, departamento, puesto, demographicData, hasDemographicFilter, refreshVersion]);
 
   useEffect(() => {
     let cancelled = false;
-    (readOnly ? getPortalFormResults() : getCompanyForms(companyId))
-      .then((result) => {
-        if (!cancelled) setEvaluationYears(result.evaluationYears ?? []);
-      })
+    (readOnly ? getPortalFormResults(evaluationYear) : getCompanyFormResults(companyId, evaluationYear))
+      .then(result => { if (!cancelled) { setDemographicData(result); setEvaluationYears(result.evaluationYears ?? []); } })
       .catch(() => {
-        if (!cancelled) setEvaluationYears([]);
+        if (cancelled) return;
+        setDepartamento("");
+        setPuesto("");
+        setDemographicData({ evaluationYear, evaluationYears: [], assignedFormKeys: [], employees: [] });
+        showError("No se pudieron cargar los filtros de Guía V. Puedes seguir consultando empleados.");
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [companyId, readOnly]);
+    return () => { cancelled = true; };
+  }, [companyId, readOnly, evaluationYear, refreshVersion]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -130,7 +173,10 @@ export function CompanyEmployeesSection({
   }, [search]);
 
   useEffect(() => {
-    void loadEmployees();
+    let cancelled = false;
+    const counter = requestVersion;
+    void Promise.resolve().then(() => { if (!cancelled) void loadEmployees(); });
+    return () => { cancelled = true; counter.current++; };
   }, [loadEmployees]);
 
   useEffect(() => {
@@ -182,6 +228,7 @@ export function CompanyEmployeesSection({
       if (!confirmed) return;
       const result = await sendCompanyEmployeesAccess(token, companyId, { ...target, activateInactive });
       clearSelection();
+      filteredListCache.current = null;
       await loadEmployees();
       await showSendAccessSummary(result);
     } catch (err) {
@@ -202,51 +249,13 @@ export function CompanyEmployeesSection({
           <p className="mt-1 text-sm text-brand-muted">
             {readOnly ? "Trabajadores de tu empresa." : "Alumnos vinculados a esta empresa."}
           </p>
-          <p className="mt-2 text-sm font-semibold text-brand-gray">
-            Formularios NOM-035 · Año de evaluación: {evaluationYear}
-          </p>
-          <p className="mt-1 text-xs text-brand-muted">
-            Los estados y respuestas de las guías corresponden al año seleccionado.
-          </p>
-          <select
-            aria-label="Año de evaluación"
-            value={evaluationYear}
-            disabled={isLoading}
-            onChange={(event) => {
-              setPreview(null);
-              setEvaluationYear(Number(event.target.value));
-            }}
-            className="mt-1.5 block w-full max-w-xs rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm text-brand-gray"
-          >
-            {Array.from(
-              new Set([
-                ...evaluationYears,
-                evaluationYear,
-                currentYear - 1,
-                currentYear,
-                currentYear + 1,
-              ]),
-            )
-              .sort((a, b) => b - a)
-              .map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-          </select>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nombre, correo o CURP..."
-            className="w-full max-w-sm rounded-lg border border-brand-line px-4 py-2.5 text-sm outline-none focus:border-brand-blue lg:w-72"
-          />
           {!readOnly && (
           <>
           <button
             type="button"
-            disabled={sendingAccess || total === 0}
+            disabled={isLoading || sendingAccess || total === 0 || (hasDemographicFilter && selected.size === 0)}
             onClick={() =>
               void sendAccess(
                 allSelected || selected.size === 0
@@ -261,7 +270,7 @@ export function CompanyEmployeesSection({
               ? "Enviando..."
               : selectionCount > 0 && !allSelected
                 ? `Enviar accesos (${selectionCount})`
-                : "Enviar accesos a todos"}
+                : hasDemographicFilter ? "Selecciona empleados" : "Enviar accesos a todos"}
           </button>
           <button
             type="button"
@@ -282,6 +291,69 @@ export function CompanyEmployeesSection({
         </div>
       </div>
 
+      <div className="space-y-4 border-b border-brand-line bg-brand-light/30 p-4 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-brand-gray">Buscar y filtrar empleados</h3>
+            <p className="mt-1 text-xs text-brand-muted">El año aplica a los formularios y a los datos de departamento y puesto de la Guía V.</p>
+          </div>
+          {(search || hasDemographicFilter) && <button type="button"
+            onClick={() => { setSearch(""); setDebouncedSearch(""); changeDepartamento(""); changePuesto(""); }}
+            className="text-sm font-semibold text-brand-blue hover:underline">
+            Limpiar filtros
+          </button>}
+        </div>
+        <div className="grid items-end gap-3 sm:grid-cols-[180px_minmax(0,1fr)]">
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-brand-muted">Año de evaluación</span>
+          <select
+            aria-label="Año de evaluación"
+            value={evaluationYear}
+            disabled={isLoading}
+            onChange={(event) => {
+              setPreview(null);
+              setDemographicData(null);
+              changeDepartamento("");
+              changePuesto("");
+              setEvaluationYear(Number(event.target.value));
+            }}
+            className="block w-full rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm text-brand-gray"
+          >
+            {Array.from(
+              new Set([
+                ...evaluationYears,
+                evaluationYear,
+                currentYear - 1,
+                currentYear,
+                currentYear + 1,
+              ]),
+            )
+              .sort((a, b) => b - a)
+              .map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+          </select>
+
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-brand-muted">Buscar empleado</span>
+            <input type="search" value={search} onChange={(event) => setSearch(event.target.value)}
+              placeholder="Nombre, correo, CURP o expediente (UUID)"
+              className="w-full rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm outline-none focus:border-brand-blue" />
+          </label>
+        </div>
+        {demographicData && <CompanyDashboardDemographicFilters
+          embedded demographics={demographicData.demographics} employees={demographicData.employees}
+          departamento={departamento} puesto={puesto}
+          onDepartamentoChange={changeDepartamento} onPuestoChange={changePuesto}
+        />}
+        <p role="status" className="text-xs text-brand-muted">
+          {isLoading ? "Buscando empleados…" : `${total} empleado${total === 1 ? "" : "s"}${search || hasDemographicFilter ? " encontrados" : ""}`} · Formularios {evaluationYear}
+        </p>
+      </div>
+
       {showSelect && (pageAllChecked || allSelected || selected.size > 0) && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-brand-line bg-brand-light/60 px-6 py-2.5 text-sm text-brand-gray">
           {allSelected ? (
@@ -294,7 +366,7 @@ export function CompanyEmployeesSection({
               {selected.size} seleccionado{selected.size === 1 ? "" : "s"}.
             </span>
           )}
-          {!allSelected && pageAllChecked && total > pageIds.length && !debouncedSearch && (
+          {!allSelected && pageAllChecked && total > pageIds.length && !debouncedSearch && !hasDemographicFilter && (
             <button
               type="button"
               onClick={() => setAllSelected(true)}
@@ -315,8 +387,8 @@ export function CompanyEmployeesSection({
         </div>
       ) : employees.length === 0 ? (
         <div className="px-6 py-12 text-center text-sm text-brand-muted">
-          {debouncedSearch
-            ? "No hay empleados que coincidan con la búsqueda."
+          {debouncedSearch || hasDemographicFilter
+            ? "No hay empleados que coincidan con la búsqueda y los filtros."
             : "Esta empresa aún no tiene empleados vinculados."}
         </div>
       ) : (
@@ -553,8 +625,9 @@ export function CompanyEmployeesSection({
                   await createStudent(token, input);
                   setShowCreate(false);
                   setSearch("");
+                  setDebouncedSearch("");
                   setPage(1);
-                  await loadEmployees();
+                  refreshData();
                   onEmployeeCreated?.();
                   await showCredentialsCreated({
                     title: "Empleado creado",
@@ -576,12 +649,7 @@ export function CompanyEmployeesSection({
           formKey={preview.formKey}
           readOnly={readOnly}
           onClose={() => setPreview(null)}
-          onSaved={() => {
-            const ids = employees.map((e) => e.id);
-            getCompanyEmployeesFormsSummary(companyId, ids, evaluationYear)
-              .then((r) => setFormsByStudent(r.employees))
-              .catch(() => undefined);
-          }}
+          onSaved={refreshData}
         />
       )}
       {!readOnly && (
@@ -592,11 +660,9 @@ export function CompanyEmployeesSection({
         onClose={() => setShowImport(false)}
         onImported={() => {
           setSearch("");
+          setDebouncedSearch("");
           setPage(1);
-          void loadEmployees();
-          void getCompanyForms(companyId)
-            .then((result) => setEvaluationYears(result.evaluationYears ?? []))
-            .catch(() => undefined);
+          refreshData();
           onEmployeeCreated?.();
         }}
       />
@@ -606,11 +672,14 @@ export function CompanyEmployeesSection({
 }
 
 function EmployeeName({ id, name, readOnly, companyId }: { id: string; name: string; readOnly: boolean; companyId: string }) {
-  if (readOnly) return <Link href={`/empresa/empleados/${id}`} className="group inline-flex flex-col gap-1 font-medium text-brand-gray hover:text-brand-blue"><span>{name}</span><span className="text-xs font-semibold text-brand-blue group-hover:underline">Ver detalle →</span></Link>;
   return (
-    <Link href={`/admin/alumnos/${id}?returnTo=${encodeURIComponent(`/admin/empresas/${companyId}?tab=empleados`)}`} className="font-medium text-brand-gray hover:text-brand-blue">
-      {name}
-    </Link>
+    <div>
+      <Link href={readOnly ? `/empresa/empleados/${id}` : `/admin/alumnos/${id}?returnTo=${encodeURIComponent(`/admin/empresas/${companyId}?tab=empleados`)}`} className="font-medium text-brand-gray hover:text-brand-blue">
+        {name}
+      </Link>
+      <EmployeeRecordNumber id={id} />
+      {readOnly && <Link href={`/empresa/empleados/${id}`} className="mt-1 inline-block text-xs font-semibold text-brand-blue hover:underline">Ver detalle →</Link>}
+    </div>
   );
 }
 

@@ -49,8 +49,10 @@ export function StudentFormAnswer({ formKey }: { formKey: string }) {
   const latest = useRef<FormAnswers>({});
 
   useEffect(() => {
+    let cancelled = false;
     getStudentForm(formKey)
       .then((r) => {
+        if (cancelled) return;
         setForm(r.form);
         setAnswers(r.answers);
         latest.current = r.answers;
@@ -60,8 +62,9 @@ export function StudentFormAnswer({ formKey }: { formKey: string }) {
         setCurrentId(firstOpen?.question.id ?? null);
       })
       .catch((err) =>
-        setUnavailable(err instanceof Error ? err.message : "Este formulario no está disponible"),
+        !cancelled && setUnavailable(err instanceof Error ? err.message : "Este formulario no está disponible"),
       );
+    return () => { cancelled = true; };
   }, [formKey]);
 
   const inflight = useRef<Promise<boolean> | null>(null);

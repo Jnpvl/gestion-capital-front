@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import type { AlumnoType } from "@/core/domain/students/alumno-types";
 import { ALUMNO_TYPE_OPTIONS } from "@/core/domain/students/alumno-types";
 import type { StudentListItem } from "@/core/domain/students/types";
@@ -35,7 +35,9 @@ export function StudentsPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
 
+  const loadVersion = useRef(0);
   const loadStudents = useCallback(async () => {
+    const version = ++loadVersion.current;
     const token = authStorage.getToken();
     if (!token) return;
 
@@ -50,13 +52,15 @@ export function StudentsPageContent() {
         page,
         limit: PAGE_SIZE,
       });
+      if (version !== loadVersion.current) return;
       setStudents(result.students);
       setTotal(result.total);
       setTotalPages(result.totalPages);
     } catch (err) {
+      if (version !== loadVersion.current) return;
       showError(err instanceof StudentsApiError ? err.message : "Error al cargar alumnos");
     } finally {
-      setIsLoading(false);
+      if (version === loadVersion.current) setIsLoading(false);
     }
   }, [filter, typeFilter, debouncedSearch, page]);
 
@@ -69,7 +73,10 @@ export function StudentsPageContent() {
   }, [search]);
 
   useEffect(() => {
-    void loadStudents();
+    let cancelled = false;
+    const counter = loadVersion;
+    void Promise.resolve().then(() => { if (!cancelled) void loadStudents(); });
+    return () => { cancelled = true; counter.current++; };
   }, [loadStudents]);
 
   async function handleToggleStatus(student: StudentListItem) {
@@ -131,7 +138,7 @@ export function StudentsPageContent() {
                 const { student } = await createStudent(token, input);
                 setShowCreate(false);
                 setPage(1);
-                await loadStudents();
+                if (page === 1) await loadStudents();
                 await showCredentialsCreated({
                   title: "Alumno creado",
                   email: input.email,

@@ -17,12 +17,15 @@ export function FormPreviewContent({ formKey }: { formKey: string }) {
   const [answers, setAnswers] = useState<FormAnswers>({});
 
   useEffect(() => {
+    let cancelled = false;
     getForm(formKey)
-      .then((r) => setForm(r.form))
+      .then((r) => { if (!cancelled) setForm(r.form); })
       .catch((err) => {
+        if (cancelled) return;
         showError(err instanceof Error ? err.message : "Error al cargar el formulario");
         setFailed(true);
       });
+    return () => { cancelled = true; };
   }, [formKey]);
 
   const visible = useMemo(
@@ -38,6 +41,63 @@ export function FormPreviewContent({ formKey }: { formKey: string }) {
     );
   }
   if (!form) return <div className="text-sm text-brand-muted">Cargando formulario...</div>;
+
+  if (form.documentUrl) {
+    const fileName = `${form.key}.pdf`;
+    return (
+      <div className="space-y-6">
+        <div>
+          <Link href="/admin/formularios" className="text-sm font-medium text-brand-blue hover:underline">
+            ← Volver a formularios
+          </Link>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="font-display text-2xl font-bold text-brand-gray">{form.title}</h1>
+                <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-800">
+                  Documento PDF
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-brand-gray">{form.subtitle}</p>
+              {form.instructions && (
+                <p className="mt-2 text-sm text-brand-muted">{form.instructions}</p>
+              )}
+            </div>
+            <a
+              href={form.documentUrl}
+              download={fileName}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center rounded-lg bg-brand-black px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-gray"
+            >
+              Descargar PDF
+            </a>
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-brand-line bg-white shadow-sm">
+          <iframe
+            title={`Vista previa ${form.title}`}
+            src={`${form.documentUrl}#view=FitH`}
+            className="h-[min(80vh,900px)] w-full bg-brand-light"
+          />
+        </div>
+
+        <p className="text-center text-xs text-brand-muted">
+          Si el navegador no muestra el PDF,{" "}
+          <a
+            href={form.documentUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-brand-blue hover:underline"
+          >
+            ábrelo en una pestaña nueva
+          </a>
+          .
+        </p>
+      </div>
+    );
+  }
 
   const hidden = form.sections.length - visible.length;
   const setAnswer = (id: string, value: string) => setAnswers((a) => ({ ...a, [id]: value }));

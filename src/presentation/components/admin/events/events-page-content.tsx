@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import type { EventFormValues, EventListItem } from "@/core/domain/events/types";
 import { EMPTY_EVENT_FORM } from "@/core/domain/events/types";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
@@ -32,7 +32,9 @@ export function EventsPageContent() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<EventFormValues>(EMPTY_EVENT_FORM);
 
+  const loadVersion = useRef(0);
   const loadEvents = useCallback(async () => {
+    const version = ++loadVersion.current;
     const token = authStorage.getToken();
     if (!token) return;
 
@@ -43,13 +45,15 @@ export function EventsPageContent() {
         page,
         limit: PAGE_SIZE,
       });
+      if (version !== loadVersion.current) return;
       setEvents(result.events);
       setTotal(result.total);
       setTotalPages(result.totalPages);
     } catch (err) {
+      if (version !== loadVersion.current) return;
       showError(err instanceof EventsApiError ? err.message : "Error al cargar eventos");
     } finally {
-      setIsLoading(false);
+      if (version === loadVersion.current) setIsLoading(false);
     }
   }, [debouncedSearch, page]);
 
@@ -62,7 +66,10 @@ export function EventsPageContent() {
   }, [search]);
 
   useEffect(() => {
-    void loadEvents();
+    let cancelled = false;
+    const counter = loadVersion;
+    void Promise.resolve().then(() => { if (!cancelled) void loadEvents(); });
+    return () => { cancelled = true; counter.current++; };
   }, [loadEvents]);
 
   function openCreate() {

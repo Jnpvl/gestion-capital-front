@@ -344,7 +344,7 @@ function Radar({ groups }: { groups: Group[] }) {
     <div className="mt-4 flex flex-col gap-6">
       <svg
         viewBox="0 0 360 340"
-        className="mx-auto w-full max-w-[22rem]"
+        className="mx-auto w-full max-w-88"
         role="img"
         aria-label="Porcentaje de evaluados con riesgo alto o muy alto por dominio. Escala de cero a cien por ciento."
       >
@@ -426,10 +426,11 @@ function Radar({ groups }: { groups: Group[] }) {
   );
 }
 
-export function CompanyDashboardCharts({ data, guide, readOnly, returnTo }: { data: CompanyDashboardResponse; guide: "nom035_guia2" | "nom035_guia3"; readOnly: boolean; returnTo: string }) {
+export function CompanyDashboardCharts({ data, guide, readOnly, returnTo, active = true }: { data: CompanyDashboardResponse; guide: "nom035_guia2" | "nom035_guia3"; readOnly: boolean; returnTo: string; active?: boolean }) {
   const guideLabel = guide === "nom035_guia2" ? "Guía II" : "Guía III";
   const [form, setForm] = useState<FormDefinition | null>(null);
   useEffect(() => {
+    if (!active || form?.key === guide) return;
     let cancelled = false;
     const load = readOnly ? getPortalForm : getForm;
     load(guide)
@@ -442,7 +443,7 @@ export function CompanyDashboardCharts({ data, guide, readOnly, returnTo }: { da
     return () => {
       cancelled = true;
     };
-  }, [guide, readOnly]);
+  }, [guide, readOnly, active, form]);
   const scopes = useMemo(() => buildScopes(form), [form]);
   const selected = GUIDES.find(g => g.key === guide && data.assignedFormKeys.includes(g.key));
   const results = selected ? data.employees.flatMap(e => {

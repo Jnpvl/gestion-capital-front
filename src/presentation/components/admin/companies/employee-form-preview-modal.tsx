@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   EMPLOYEE_FORM_STATUS_LABEL,
   FORM_SHORT_LABEL,
@@ -88,12 +88,15 @@ export function EmployeeFormPreviewModal({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
+  const loadVersion = useRef(0);
   const load = useCallback(async () => {
+    const version = ++loadVersion.current;
     const [f, d] = await Promise.all(
       readOnly
         ? [getPortalForm(formKey), getPortalEmployeeFormDetail(studentId, formKey, evaluationYear)]
         : [getForm(formKey), getEmployeeFormDetail(companyId, studentId, formKey, evaluationYear)],
     );
+    if (version !== loadVersion.current) return;
     setForm(f.form);
     setDetail(d);
     // Sin aplicar: se abre directo en edición.
@@ -105,7 +108,12 @@ export function EmployeeFormPreviewModal({
   }, [companyId, studentId, formKey, readOnly, evaluationYear]);
 
   useEffect(() => {
-    load().catch((err) => setError(err instanceof Error ? err.message : "No se pudo cargar"));
+    let cancelled = false;
+    const counter = loadVersion;
+    void Promise.resolve().then(() => {
+      if (!cancelled) return load().catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : "No se pudo cargar"); });
+    });
+    return () => { cancelled = true; counter.current++; };
   }, [load]);
 
   useEffect(() => {
@@ -114,7 +122,7 @@ export function EmployeeFormPreviewModal({
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [saving]);
+  }, []);
 
   function startEdit() {
     setDraft({ ...(detail?.answers ?? {}) });

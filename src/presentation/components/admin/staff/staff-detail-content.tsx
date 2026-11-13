@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import type { StaffDetail } from "@/core/domain/staff/types";
 import { STAFF_GENDER_LABELS } from "@/core/domain/staff/types";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
@@ -24,7 +24,9 @@ export function StaffDetailContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
+  const loadVersion = useRef(0);
   const loadStaff = useCallback(async () => {
+    const version = ++loadVersion.current;
     const token = authStorage.getToken();
     if (!token || !params.id) return;
 
@@ -33,19 +35,24 @@ export function StaffDetailContent() {
 
     try {
       const result = await getStaff(token, params.id);
+      if (version !== loadVersion.current) return;
       setStaff(result.staff);
     } catch (err) {
+      if (version !== loadVersion.current) return;
       const message =
         err instanceof StaffApiError ? err.message : "Error al cargar el instructor";
       setLoadError(message);
       showError(message);
     } finally {
-      setIsLoading(false);
+      if (version === loadVersion.current) setIsLoading(false);
     }
   }, [params.id]);
 
   useEffect(() => {
-    void loadStaff();
+    let cancelled = false;
+    const counter = loadVersion;
+    void Promise.resolve().then(() => { if (!cancelled) void loadStaff(); });
+    return () => { cancelled = true; counter.current++; };
   }, [loadStaff]);
 
   async function handleToggleStatus() {

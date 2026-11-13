@@ -2,6 +2,7 @@ import { authStorage } from "../auth/auth-storage";
 import { studentAuthStorage } from "../auth/student-auth-storage";
 import { companyAuthStorage } from "../auth/company-auth-storage";
 import { env } from "../../shared/config/env";
+import { createDeduplicatedFetch } from "./deduplicated-fetch";
 
 const sessions = {
   staff: { storage: authStorage, root: "/admin", login: "/admin/login" },
@@ -15,8 +16,9 @@ export type SessionKind = keyof typeof sessions;
  * Full navigation also discards cached user data and mounted protected screens.
  */
 export function createSessionFetch(kind: SessionKind): typeof fetch {
+  const fetchRead = createDeduplicatedFetch();
   return async (input, init) => {
-    const response = await globalThis.fetch(input, init);
+    const response = await fetchRead(input, init);
     if (typeof window === "undefined" || response.status !== 401) return response;
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, window.location.origin);
     const api = new URL(env.apiUrl, window.location.origin);

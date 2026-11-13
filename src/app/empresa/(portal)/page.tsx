@@ -1,5 +1,5 @@
-import { CompanyPortalDashboard } from "@/presentation/components/company/company-portal-sections";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <CompanyPortalDashboard />;
+  redirect("/empresa/datos-generales");
 }

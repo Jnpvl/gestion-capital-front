@@ -9,9 +9,11 @@ export function StudentPendingForms() {
   const [forms, setForms] = useState<StudentPendingForm[]>([]);
 
   useEffect(() => {
+    let cancelled = false;
     listPendingForms()
-      .then((r) => setForms(r.forms))
-      .catch(() => setForms([]));
+      .then((r) => { if (!cancelled) setForms(r.forms); })
+      .catch(() => { if (!cancelled) setForms([]); });
+    return () => { cancelled = true; };
   }, []);
 
   if (forms.length === 0) return null;

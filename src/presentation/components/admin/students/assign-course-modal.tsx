@@ -61,11 +61,12 @@ export function AssignCourseModal({
   );
 
   useEffect(() => {
+    let cancelled = false;
     async function loadCourses() {
       const token = authStorage.getToken();
       if (!token) {
         showError("Debes iniciar sesión");
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
         return;
       }
 
@@ -73,21 +74,24 @@ export function AssignCourseModal({
 
       try {
         const result = await listCourses(token, { status: "published", limit: 50 });
+        if (cancelled) return;
         const nextCourses = result.courses;
         setCourses(nextCourses);
         const firstAvailable = nextCourses.find((course) => !activeCourseIds.has(course.id));
         setSelectedCourseId(firstAvailable?.id ?? "");
         setDeliveryMode(defaultDeliveryMode(firstAvailable?.modality));
       } catch (err) {
+        if (cancelled) return;
         showError(
           err instanceof CoursesApiError ? err.message : "No se pudieron cargar los cursos",
         );
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
 
     void loadCourses();
+    return () => { cancelled = true; };
   }, [activeCourseIds]);
 
   async function handleAssign() {

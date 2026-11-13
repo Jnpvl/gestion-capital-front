@@ -10,12 +10,15 @@ export function FormsPageContent() {
   const [forms, setForms] = useState<FormSummary[] | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     listForms()
-      .then((r) => setForms(r.forms))
+      .then((r) => { if (!cancelled) setForms(r.forms); })
       .catch((err) => {
+        if (cancelled) return;
         showError(err instanceof Error ? err.message : "Error al cargar formularios");
         setForms([]);
       });
+    return () => { cancelled = true; };
   }, []);
 
   return (
