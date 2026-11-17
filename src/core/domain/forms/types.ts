@@ -329,6 +329,8 @@ export interface DashboardEmployee {
   studentId: string;
   employeeName: string;
   forms: Record<FormKey, DashboardFormCell>;
+  /** Estatus de canalización del año (`employee_referrals`); null = sin expediente iniciado. */
+  referralStatus?: string | null;
 }
 
 export type DemographicRiskGuide = "nom035_guia2" | "nom035_guia3";
