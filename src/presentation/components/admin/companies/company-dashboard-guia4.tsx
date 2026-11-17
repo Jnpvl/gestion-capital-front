@@ -14,6 +14,9 @@ export function CompanyDashboardGuia4() {
           <h2 className="mt-1 font-display text-2xl font-bold text-brand-gray">
             Guía de Referencia IV
           </h2>
+          <p className="mt-2 text-sm text-brand-muted">
+            Ejemplo de política de prevención de riesgos psicosociales
+          </p>
         </div>
         <a
           href={PDF_URL}

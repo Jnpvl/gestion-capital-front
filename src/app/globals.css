@@ -55,6 +55,36 @@ body {
   font-family: var(--font-lato), system-ui, sans-serif;
 }
 
+/* Tailwind/preflight deja botones en cursor:default; clicables con pointer. */
+:where(
+  button,
+  [type="button"],
+  [type="submit"],
+  [type="reset"],
+  [type="checkbox"],
+  [type="radio"],
+  [type="file"],
+  a[href],
+  summary,
+  label[for],
+  select,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  [role="checkbox"],
+  [role="radio"],
+  [role="switch"],
+  [role="link"]
+):not(:disabled):not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+:where(button, [type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"], [type="file"], select):disabled,
+:where([aria-disabled="true"]) {
+  cursor: not-allowed;
+}
+
 /* Allow content to shrink inside the fixed portal layout without clipping it. */
 .responsive-content {
   min-width: 0;

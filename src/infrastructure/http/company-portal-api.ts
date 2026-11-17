@@ -12,12 +12,18 @@ import type {
   FormDefinition,
   FormKey,
 } from "@/core/domain/forms/types";
+import type {
+  CompanyPsychologist,
+  EmployeeReferral,
+  EmployeeReferralPayload,
+  PsychologistInput,
+} from "@/core/domain/referrals/types";
 import type { StudentDetail, StudentEnrollment, StudentsListResponse } from "@/core/domain/students/types";
 import { companyAuthStorage } from "@/infrastructure/auth/company-auth-storage";
 import { env } from "@/shared/config/env";
 
 /**
- * Portal de empresa (solo lectura). Usa el token de empresa; la empresa sale del token
+ * Portal de empresa. Usa el token de empresa; la empresa sale del token
  * en el back, por eso ningún endpoint recibe companyId.
  */
 export class CompanyPortalApiError extends Error {
@@ -30,11 +36,16 @@ export class CompanyPortalApiError extends Error {
   }
 }
 
-async function get<T>(path: string): Promise<T> {
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = companyAuthStorage.getToken();
   if (!token) throw new CompanyPortalApiError("No hay sesión activa", 401);
   const response = await companyFetch(`${env.apiUrl}/api/company${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(options?.body ? { "Content-Type": "application/json" } : {}),
+      ...options?.headers,
+    },
     cache: "no-store",
   });
   const data = await response.json().catch(() => null);
@@ -43,6 +54,10 @@ async function get<T>(path: string): Promise<T> {
     throw new CompanyPortalApiError(error?.error?.message ?? "Error en la solicitud", response.status);
   }
   return data as T;
+}
+
+async function get<T>(path: string): Promise<T> {
+  return request<T>(path);
 }
 
 export type PortalCompany = Omit<CompanyDetail, "accessEmail" | "hasAccess" | "lastLoginAt">;
@@ -88,4 +103,45 @@ export function getPortalCourseDetail(courseId: string) {
 export type PortalEmployee = Pick<StudentDetail, "id" | "name" | "paternalLastName" | "maternalLastName" | "firstNames" | "email" | "phone" | "curp" | "gender" | "age" | "residenceLocation" | "educationLevel" | "professionArea" | "educationInstitution" | "currentlyEmployed" | "jobType" | "currentPosition" | "industrySector" | "yearsExperience" | "timeInCurrentPosition" | "stpsOccupationCode" | "stpsOccupationName" | "stpsThematicAreaCode" | "stpsThematicAreaName" | "companyId" | "companyName" | "companyRfc">;
 export function getPortalEmployeeDetail(studentId: string) {
   return get<{ student: PortalEmployee; enrollments: StudentEnrollment[] }>(`/employees/${encodeURIComponent(studentId)}`);
+}
+
+export function listPortalPsychologists() {
+  return get<{ psychologists: CompanyPsychologist[] }>("/psychologists");
+}
+
+export function createPortalPsychologist(input: PsychologistInput) {
+  return request<{ psychologist: CompanyPsychologist }>("/psychologists", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updatePortalPsychologist(psychologistId: string, input: PsychologistInput) {
+  return request<{ psychologist: CompanyPsychologist }>(
+    `/psychologists/${encodeURIComponent(psychologistId)}`,
+    { method: "PUT", body: JSON.stringify(input) },
+  );
+}
+
+export function deletePortalPsychologist(psychologistId: string) {
+  return request<{ ok: boolean }>(`/psychologists/${encodeURIComponent(psychologistId)}`, {
+    method: "DELETE",
+  });
+}
+
+export function getPortalEmployeeReferral(studentId: string, year: number | string) {
+  return get<{ psychologists: CompanyPsychologist[]; referral: EmployeeReferral | null }>(
+    `/employees/${encodeURIComponent(studentId)}/referral?year=${encodeURIComponent(String(year))}`,
+  );
+}
+
+export function savePortalEmployeeReferral(
+  studentId: string,
+  year: number | string,
+  input: EmployeeReferralPayload,
+) {
+  return request<{ referral: EmployeeReferral }>(
+    `/employees/${encodeURIComponent(studentId)}/referral?year=${encodeURIComponent(String(year))}`,
+    { method: "PUT", body: JSON.stringify(input) },
+  );
 }

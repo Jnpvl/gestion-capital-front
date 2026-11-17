@@ -12,6 +12,7 @@ export function DashboardEmployeeLink({ studentId, name, readOnly = false, retur
   const year = origin.searchParams.get("nomYear");
   if (year && /^(20\d{2}|2100)$/.test(year)) params.set("nomYear", year);
   if (guide) params.set("guide", guide);
+  if (origin.searchParams.get("dashboardView") === "referrals") params.set("nomSection", "referral");
   return <Link
     href={`${readOnly ? `/empresa/empleados/${studentId}` : `/admin/alumnos/${studentId}`}?${params.toString()}`}
     className="group inline-flex flex-col gap-1 rounded font-medium text-brand-gray hover:text-brand-blue focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-blue"

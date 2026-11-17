@@ -12,6 +12,12 @@ import type {
   CreateCompanyInput,
   UpdateCompanyInput,
 } from "@/core/domain/companies/types";
+import type {
+  CompanyPsychologist,
+  EmployeeReferral,
+  EmployeeReferralPayload,
+  PsychologistInput,
+} from "@/core/domain/referrals/types";
 import { authStorage } from "@/infrastructure/auth/auth-storage";
 import { env } from "@/shared/config/env";
 
@@ -238,4 +244,70 @@ export async function assignCompanyCourse(
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export async function listCompanyPsychologists(token: string, companyId: string) {
+  return request<{ psychologists: CompanyPsychologist[] }>(`/${companyId}/psychologists`, token);
+}
+
+export async function createCompanyPsychologist(
+  token: string,
+  companyId: string,
+  input: PsychologistInput,
+) {
+  return request<{ psychologist: CompanyPsychologist }>(`/${companyId}/psychologists`, token, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateCompanyPsychologist(
+  token: string,
+  companyId: string,
+  psychologistId: string,
+  input: PsychologistInput,
+) {
+  return request<{ psychologist: CompanyPsychologist }>(
+    `/${companyId}/psychologists/${encodeURIComponent(psychologistId)}`,
+    token,
+    { method: "PUT", body: JSON.stringify(input) },
+  );
+}
+
+export async function deleteCompanyPsychologist(
+  token: string,
+  companyId: string,
+  psychologistId: string,
+) {
+  return request<{ ok: boolean }>(
+    `/${companyId}/psychologists/${encodeURIComponent(psychologistId)}`,
+    token,
+    { method: "DELETE" },
+  );
+}
+
+export async function getCompanyEmployeeReferral(
+  token: string,
+  companyId: string,
+  studentId: string,
+  year: number | string,
+) {
+  return request<{ psychologists: CompanyPsychologist[]; referral: EmployeeReferral | null }>(
+    `/${companyId}/employees/${encodeURIComponent(studentId)}/referral?year=${encodeURIComponent(String(year))}`,
+    token,
+  );
+}
+
+export async function saveCompanyEmployeeReferral(
+  token: string,
+  companyId: string,
+  studentId: string,
+  year: number | string,
+  input: EmployeeReferralPayload,
+) {
+  return request<{ referral: EmployeeReferral }>(
+    `/${companyId}/employees/${encodeURIComponent(studentId)}/referral?year=${encodeURIComponent(String(year))}`,
+    token,
+    { method: "PUT", body: JSON.stringify(input) },
+  );
 }
