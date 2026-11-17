@@ -28,8 +28,8 @@ export function EventsTable({ events, isLoading, onEdit, onDelete }: EventsTable
 
   return (
     <div className="overflow-hidden rounded-2xl border border-brand-line bg-white">
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-left text-sm">
+      <div className="min-w-0">
+        <table className="responsive-table text-left text-sm">
           <thead className="border-b border-brand-line bg-brand-light/50 text-xs uppercase tracking-wide text-brand-muted">
             <tr>
               <th className="px-4 py-3 font-semibold">Orden</th>
@@ -44,11 +44,11 @@ export function EventsTable({ events, isLoading, onEdit, onDelete }: EventsTable
           <tbody>
             {events.map((event) => (
               <tr key={event.id} className="border-b border-brand-line last:border-0">
-                <td className="px-4 py-3 text-brand-muted">{event.sortOrder}</td>
-                <td className="px-4 py-3 font-medium text-brand-gray">{event.title}</td>
-                <td className="px-4 py-3 text-brand-muted">{event.eventType}</td>
-                <td className="px-4 py-3 text-brand-muted">{event.dateLabel}</td>
-                <td className="px-4 py-3">
+                <td data-label="Orden" className="px-4 py-3 text-brand-muted">{event.sortOrder}</td>
+                <td data-label="Título" className="px-4 py-3 font-medium text-brand-gray">{event.title}</td>
+                <td data-label="Tipo" className="px-4 py-3 text-brand-muted">{event.eventType}</td>
+                <td data-label="Fecha" className="px-4 py-3 text-brand-muted">{event.dateLabel}</td>
+                <td data-label="Estado" className="px-4 py-3">
                   <span
                     className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                       event.status === "published"
@@ -59,10 +59,10 @@ export function EventsTable({ events, isLoading, onEdit, onDelete }: EventsTable
                     {event.status === "published" ? "Publicado" : "Borrador"}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-brand-muted">
+                <td data-label="Visible" className="px-4 py-3 text-brand-muted">
                   {event.isVisible ? "Sí" : "No"}
                 </td>
-                <td className="px-4 py-3">
+                <td data-label="Acciones" className="px-4 py-3">
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"

@@ -23,7 +23,7 @@ export function AdminPagination({
       <p className="text-sm text-brand-muted">
         Mostrando {from}–{to} de {total}
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => onPageChange(page - 1)}

@@ -53,10 +53,10 @@ export function StudentShell({ children }: StudentShellProps) {
             <Logo size="sm" />
           </Link>
 
-          <div className="flex items-center gap-4">
-            <div className="hidden text-right sm:block">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="hidden min-w-0 text-right sm:block">
               <p className="text-sm font-medium text-brand-gray">{user.name}</p>
-              <p className="text-xs text-brand-muted">{user.email}</p>
+              <p className="truncate text-xs text-brand-muted">{user.email}</p>
             </div>
             <button
               type="button"
@@ -72,7 +72,7 @@ export function StudentShell({ children }: StudentShellProps) {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">{children}</main>
+      <main className="responsive-content mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">{children}</main>
     </div>
   );
 }

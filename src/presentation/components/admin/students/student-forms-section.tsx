@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { EMPLOYEE_FORM_STATUS_LABEL, RISK_LEVEL_COLOR, RISK_LEVEL_LABEL, clinicalResultColor, clinicalResultText, type CompanyDashboardResponse, type FormKey } from "@/core/domain/forms/types";
 import { getCompanyFormResults } from "@/infrastructure/http/forms-api";
@@ -16,6 +17,10 @@ const guides: { key: FormKey; title: string; description: string }[] = [
 ];
 
 export function StudentFormsSection({ companyId, studentId, employeeName, readOnly = false }: { readOnly?: boolean; companyId: string | null; studentId: string; employeeName: string }) {
+  const params = useSearchParams();
+  const [year, setYear] = useState(() => /^(20\d{2}|2100)$/.test(params.get("nomYear") ?? "") ? params.get("nomYear")! : String(new Date().getFullYear()));
+  const [guideFilter, setGuideFilter] = useState<FormKey | "all">(() => guides.find(g => g.key === params.get("guide"))?.key ?? "all");
+  const [years, setYears] = useState<number[]>([]);
   const [data, setData] = useState<CompanyDashboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
@@ -24,22 +29,33 @@ export function StudentFormsSection({ companyId, studentId, employeeName, readOn
   useEffect(() => {
     if (!companyId) return;
     let cancelled = false;
-    (readOnly ? getPortalFormResults() : getCompanyFormResults(companyId)).then(result => {
-      if (!cancelled) { setData(result); setError(null); }
+    (readOnly ? getPortalFormResults(year) : getCompanyFormResults(companyId, year)).then(result => {
+      if (!cancelled) { setData(result); setYears(result.evaluationYears ?? []); setError(null); }
     }).catch(err => { if (!cancelled) setError(err instanceof Error ? err.message : "No se pudieron cargar los formularios."); });
     return () => { cancelled = true; };
-  }, [companyId, revision, readOnly]);
+  }, [companyId, revision, readOnly, year]);
 
   if (!companyId) return <div className="rounded-2xl border border-brand-line bg-white p-8"><h2 className="font-display text-xl font-bold">Formularios NOM-035</h2><p className="mt-3 text-sm text-brand-muted">El alumno no tiene una empresa vinculada. Vincula su empresa en Datos del alumno para consultar las guías asignadas y sus respuestas.</p></div>;
   if (error) return <div role="alert" className="rounded-2xl border border-brand-line bg-white p-6"><p className="text-sm text-red-700">{error}</p><button type="button" onClick={() => setRevision(r => r + 1)} className="mt-3 text-sm font-semibold text-brand-blue">Reintentar</button></div>;
   if (!data) return <p className="text-sm text-brand-muted">Cargando formularios y resultados...</p>;
   const employee = data.employees.find(e => e.studentId === studentId);
-  if (!employee) return <p className="rounded-2xl border border-brand-line bg-white p-6 text-sm text-brand-muted">No se encontró al alumno entre los empleados de esta empresa.</p>;
+  const yearOptions = [...new Set([...years, Number(year)])].sort((a, b) => b - a);
 
   return <div className="space-y-5">
-    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-display text-xl font-bold">Formularios NOM-035</h2><p className="mt-1 text-sm text-brand-muted">Última asignación por guía de su empresa. Los resultados se muestran cuando la evaluación está completa.</p></div>{!readOnly && <Link href={`/admin/empresas/${companyId}?tab=formularios`} className="text-sm font-semibold text-brand-blue hover:underline">Ver formularios de la empresa →</Link>}</div>
-    <div className="grid items-stretch gap-5 xl:grid-cols-2">{guides.map(guide => {
-      const cell = employee.forms[guide.key];
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-display text-xl font-bold">Formularios NOM-035</h2><p className="mt-1 text-sm text-brand-muted">Evaluaciones del año {year}. Los resultados se muestran cuando la evaluación está completa.</p></div>{!readOnly && <Link href={`/admin/empresas/${companyId}?tab=formularios`} className="text-sm font-semibold text-brand-blue hover:underline">Ver formularios de la empresa →</Link>}</div>
+    <div role="tablist" aria-label="Año de evaluación" className="flex flex-wrap gap-2">
+      {yearOptions.map(option => <button key={option} type="button" role="tab" aria-selected={String(option) === year}
+        onClick={() => { setYear(String(option)); setData(null); setSelected(null); setError(null); }}
+        className={`rounded-xl px-4 py-2.5 text-sm font-semibold ${String(option) === year ? "bg-brand-blue text-white" : "border border-brand-line bg-white text-brand-gray"}`}>{option}</button>)}
+    </div>
+    <div role="tablist" aria-label="Guías NOM-035" className="flex flex-wrap gap-2">
+      {[{ key: "all" as const, title: "Todas las guías" }, ...guides].map(guide => <button key={guide.key} type="button" role="tab" aria-selected={guideFilter === guide.key}
+        onClick={() => { setGuideFilter(guide.key); setSelected(null); }}
+        className={`rounded-lg px-3 py-2 text-sm font-semibold ${guideFilter === guide.key ? "bg-brand-blue/10 text-brand-blue" : "text-brand-muted hover:bg-brand-light"}`}>{guide.title}</button>)}
+    </div>
+    {!employee && <p className="rounded-xl border border-brand-line p-5 text-sm text-brand-muted">No hay evaluaciones del empleado para este año.</p>}
+    <div className="grid items-stretch gap-5 xl:grid-cols-2">{(employee ? guides : []).filter(guide => guideFilter === "all" || guide.key === guideFilter).map(guide => {
+      const cell = employee?.forms[guide.key];
       const assigned = guide.key === "nom035_guia5" || data.assignedFormKeys.includes(guide.key);
       const status = !assigned ? "No asignada" : cell?.status === "not_assigned" || !cell ? "Sin aplicar" : EMPLOYEE_FORM_STATUS_LABEL[cell.status];
       const result = cell?.status === "completed" ? cell.result : null;
@@ -59,6 +75,6 @@ export function StudentFormsSection({ companyId, studentId, employeeName, readOn
         </div>
       </article>;
     })}</div>
-    {selected && <EmployeeFormPreviewModal readOnly={readOnly} companyId={companyId} studentId={studentId} employeeName={employeeName} formKey={selected} onClose={() => setSelected(null)} onSaved={() => setRevision(r => r + 1)} />}
+    {selected && <EmployeeFormPreviewModal readOnly={readOnly} companyId={companyId} studentId={studentId} employeeName={employeeName} formKey={selected} evaluationYear={Number(year)} onClose={() => setSelected(null)} onSaved={() => setRevision(r => r + 1)} />}
   </div>;
 }

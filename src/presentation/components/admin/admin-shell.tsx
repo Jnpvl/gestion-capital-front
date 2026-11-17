@@ -88,7 +88,7 @@ export function AdminShell({ children }: AdminShellProps) {
           </div>
         </header>
 
-        <main id="workspace-content" className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 [scrollbar-gutter:stable] lg:p-8">{children}</main>
+        <main id="workspace-content" className="responsive-content min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 [scrollbar-gutter:stable] lg:p-8">{children}</main>
       </div>
     </div>
   );

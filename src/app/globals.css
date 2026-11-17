@@ -55,6 +55,97 @@ body {
   font-family: var(--font-lato), system-ui, sans-serif;
 }
 
+/* Allow content to shrink inside the fixed portal layout without clipping it. */
+.responsive-content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.responsive-content :where(input, select, textarea) {
+  max-width: 100%;
+}
+.responsive-table {
+  width: 100%;
+  table-layout: auto;
+  overflow-wrap: anywhere;
+}
+.responsive-table > tbody > tr > td {
+  min-width: 0;
+  white-space: normal;
+}
+.responsive-table > thead > tr > th {
+  overflow-wrap: normal;
+}
+@media (width < 80rem) {
+  .responsive-table {
+    display: block;
+    min-width: 0;
+  }
+  .responsive-table > thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .responsive-table > tbody,
+  .responsive-table > tbody > tr {
+    display: block;
+    width: 100%;
+  }
+  .responsive-table > thead:has(input[type="checkbox"]) {
+    position: static;
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+  .responsive-table > thead:has(input[type="checkbox"]) > tr {
+    display: block;
+  }
+  .responsive-table > thead:has(input[type="checkbox"]) th {
+    display: none;
+  }
+  .responsive-table > thead:has(input[type="checkbox"]) th:has(input[type="checkbox"]) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+  }
+  .responsive-table > thead th[data-label]::after {
+    content: attr(data-label);
+  }
+  .responsive-table > tbody > tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0.75rem 0;
+  }
+  .responsive-table > tbody > tr > td:first-child,
+  .responsive-table > tbody > tr > td:last-child,
+  .responsive-table > tbody > tr > td[colspan] {
+    grid-column: 1 / -1;
+  }
+  .responsive-table > tbody > tr > td[data-label="Seleccionar"] + td {
+    grid-column: 1 / -1;
+  }
+  .responsive-table > tbody > tr > td {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    text-align: left;
+  }
+  .responsive-table > tbody > tr > td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--brand-muted);
+    font-size: 0.6875rem;
+    font-weight: 600;
+  }
+}
+
 ::selection {
   background-color: color-mix(in srgb, var(--brand-blue) 18%, white);
   color: var(--brand-gray);

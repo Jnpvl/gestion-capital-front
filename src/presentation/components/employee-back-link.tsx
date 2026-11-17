@@ -13,11 +13,18 @@ function OriginBackLink({ company, fallback }: { company: boolean; fallback: Rea
   const params = useSearchParams();
   const returnTo = params.get("returnTo");
   if (!returnTo) return fallback;
-  // Solo destinos internos de dashboard del mismo portal.
-  const valid = company
-    ? /^\/empresa\?dashboardView=[a-zA-Z0-9]+$/.test(returnTo)
-    : /^\/admin\/empresas\/[a-fA-F0-9-]+\?tab=dashboard&dashboardView=[a-zA-Z0-9]+$/.test(returnTo);
-  const employees = !company && /^\/admin\/empresas\/[a-fA-F0-9-]+\?tab=empleados$/.test(returnTo);
+  // Parsear la ruta permite conservar el año sin aceptar destinos externos.
+  if (!returnTo.startsWith("/") || returnTo.startsWith("//")) return fallback;
+  const origin = new URL("https://internal.invalid");
+  const target = new URL(returnTo, origin);
+  if (target.origin !== origin.origin) return fallback;
+  const allowedPath = company ? ["/empresa", "/empresa/nom-035"].includes(target.pathname) : /^\/admin\/empresas\/[a-fA-F0-9-]+$/.test(target.pathname);
+  const dashboardView = target.searchParams.get("dashboardView");
+  const year = target.searchParams.get("nomYear");
+  const valid = allowedPath && (company || target.searchParams.get("tab") === "dashboard")
+    && ["general", "clinical", "psychosocial2", "psychosocial3", "demographics", "guia4", "referrals"].includes(dashboardView ?? "")
+    && (!year || /^(20\d{2}|2100)$/.test(year));
+  const employees = !company && allowedPath && target.searchParams.get("tab") === "empleados";
   if (!valid && !employees) return fallback;
   return <Link href={returnTo} className="text-sm font-semibold text-brand-blue hover:underline">← {employees ? "Volver a empleados" : "Volver al dashboard"}</Link>;
 }

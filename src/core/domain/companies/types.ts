@@ -5,6 +5,7 @@ export interface CompanyAutocompleteItem {
 }
 
 export interface CompanyListItem extends CompanyAutocompleteItem {
+  activityMain: string | null;
   employerRepresentative: string | null;
   studentsCount: number;
   createdAt: string;
@@ -17,6 +18,20 @@ export interface CompanyDetail {
   employerRepresentative: string | null;
   workersRepresentative: string | null;
   workersCount: number | null;
+  address: string | null;
+  addressStreet: string | null;
+  addressExteriorNumber: string | null;
+  addressInteriorNumber: string | null;
+  addressNeighborhood: string | null;
+  addressPostalCode: string | null;
+  addressCity: string | null;
+  addressMunicipality: string | null;
+  addressState: string | null;
+  addressCountry: string | null;
+  addressBetweenStreet1: string | null;
+  addressBetweenStreet2: string | null;
+  /** Actividad principal del negocio. */
+  activityMain: string | null;
   /** Correo de acceso al portal de empresa. */
   accessEmail: string | null;
   hasAccess: boolean;
@@ -41,9 +56,35 @@ export interface CreateCompanyInput {
   employerRepresentative?: string | null;
   workersRepresentative?: string | null;
   workersCount?: number | null;
+  activityMain?: string | null;
+  address?: string | null;
+  addressStreet?: string | null;
+  addressExteriorNumber?: string | null;
+  addressInteriorNumber?: string | null;
+  addressNeighborhood?: string | null;
+  addressPostalCode?: string | null;
+  addressCity?: string | null;
+  addressMunicipality?: string | null;
+  addressState?: string | null;
+  addressCountry?: string | null;
+  addressBetweenStreet1?: string | null;
+  addressBetweenStreet2?: string | null;
 }
 
 export interface UpdateCompanyInput {
+  activityMain?: string | null;
+  address?: string | null;
+  addressStreet?: string | null;
+  addressExteriorNumber?: string | null;
+  addressInteriorNumber?: string | null;
+  addressNeighborhood?: string | null;
+  addressPostalCode?: string | null;
+  addressCity?: string | null;
+  addressMunicipality?: string | null;
+  addressState?: string | null;
+  addressCountry?: string | null;
+  addressBetweenStreet1?: string | null;
+  addressBetweenStreet2?: string | null;
   name?: string;
   rfc?: string | null;
   employerRepresentative?: string | null;

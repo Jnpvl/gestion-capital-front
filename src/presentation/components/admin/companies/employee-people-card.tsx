@@ -15,6 +15,14 @@ interface EmployeePeopleCardProps {
   people: RiskBarPerson[];
   readOnly: boolean;
   returnTo: string;
+  personDetails?: Record<string, string[]>;
+  allowEmpty?: boolean;
+  onActivate?: () => void;
+  subtitle?: string | null;
+  guideLabel?: string;
+  exportYear?: number;
+  groups?: { label: string; people: RiskBarPerson[] }[];
+  secondary?: { label: string; people: RiskBarPerson[] };
   accent?: boolean;
   icon?: React.ReactNode;
   valueColor?: string;
@@ -29,6 +37,8 @@ export function EmployeePeopleCard({
   people,
   readOnly,
   returnTo,
+  personDetails, allowEmpty = false, onActivate,
+  subtitle, guideLabel = "Guía I", exportYear, groups, secondary,
   accent = false,
   icon,
   valueColor,
@@ -38,24 +48,29 @@ export function EmployeePeopleCard({
   const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState<{ x: number; y: number; above: boolean } | null>(null);
   const [search, setSearch] = useState("");
+  const [group, setGroup] = useState("Todos");
+  const [showSecondary, setShowSecondary] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const id = useId();
-  const interactive = people.length > 0;
-  const filtered = people.filter((person) =>
+  const interactive = people.length > 0 || allowEmpty || !!onActivate;
+  const panelPeople = showSecondary ? secondary?.people ?? [] : groups?.find(item => item.label === group)?.people ?? people;
+  const panelLabel = showSecondary ? secondary?.label : label;
+  const filtered = panelPeople.filter((person) =>
     normalize(person.name).includes(normalize(search.trim())),
   );
 
   useEffect(() => {
     if (!open) return;
     const panel = dialog.current;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : trigger.current;
     panel?.showModal();
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       panel?.close();
       document.body.style.overflow = previous;
-      trigger.current?.focus({ preventScroll: true });
+      previousFocus?.focus({ preventScroll: true });
     };
   }, [open]);
 
@@ -70,7 +85,7 @@ export function EmployeePeopleCard({
   }, []);
 
   function showPreview(element: HTMLButtonElement) {
-    if (open || !interactive) return;
+    if (open || !interactive || onActivate) return;
     const rect = element.getBoundingClientRect();
     const above = rect.bottom > window.innerHeight - 230;
     setPreview({
@@ -86,12 +101,24 @@ export function EmployeePeopleCard({
       : "border-brand-line bg-white text-brand-gray"
   } ${interactive ? (accent ? "hover:bg-brand-blue-light" : "hover:border-brand-blue/40 hover:bg-brand-light/40") : ""}`;
 
+  function exportList() {
+    const escape = (value: string) => '"' + (/^[=+@\-\t\r]/.test(value) ? "'" + value : value).replace(/"/g, '""') + '"';
+    const rows = [["UUID", "Nombre", "Nivel de riesgo", "Guía", "Año"], ...filtered.map(person => [person.studentId, person.name,
+      groups?.find(item => item.people.some(member => member.studentId === person.studentId))?.label ?? "", guideLabel, String(exportYear ?? "")])];
+    const url = URL.createObjectURL(new Blob(["\uFEFF" + rows.map(row => row.map(escape).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8;" }));
+    const link = document.createElement("a"); link.href = url;
+    link.download = `riesgo-${group.replaceAll(" ", "-")}-${exportYear ?? ""}.csv`;
+    link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   const content = (
     <>
       <p className="flex items-center gap-2 text-xs font-semibold">{icon}{label}</p>
       <p className="mt-3 text-3xl font-bold tabular-nums" style={{ color: valueColor }}>{value}</p>
+      {subtitle && <p className="mt-2 text-xs font-semibold">{subtitle}</p>}
       <p className={`mt-2 text-xs ${accent ? "text-white/75" : "text-brand-muted"}`}>{note}</p>
       <div className="mt-auto flex min-h-11 flex-col justify-end gap-2 pt-3">
+        {onActivate && <span className="text-sm font-semibold text-brand-blue">Ir a Canalizaciones <span aria-hidden="true">→</span></span>}
         {badge ? (
           <div>
             <span
@@ -120,16 +147,16 @@ export function EmployeePeopleCard({
   );
 
   return (
-    <div className="h-full" onKeyDown={(event) => { if (event.key === "Escape") setPreview(null); }}>
+    <div className="flex h-full flex-col" onKeyDown={(event) => { if (event.key === "Escape") setPreview(null); }}>
       {interactive ? (
         <button
           ref={trigger}
           type="button"
-          className={`${className} cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue`}
-          aria-haspopup="dialog"
-          aria-expanded={open}
+          className={`${className} ${secondary ? "rounded-b-none border-b-0" : ""} cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue`}
+          aria-haspopup={onActivate ? undefined : "dialog"}
+          aria-expanded={onActivate ? undefined : open}
           aria-describedby={preview ? `${id}-tooltip` : undefined}
-          aria-label={`${label}: ${value}. Ver empleados`}
+          aria-label={`${label}: ${value}. ${onActivate ? "Ir a Canalizaciones" : "Ver empleados"}`}
           onPointerEnter={(event) => {
             if (event.pointerType === "mouse") showPreview(event.currentTarget);
           }}
@@ -137,16 +164,25 @@ export function EmployeePeopleCard({
           onFocus={(event) => showPreview(event.currentTarget)}
           onBlur={() => setPreview(null)}
           onClick={() => {
+            if (onActivate) { onActivate(); return; }
             setPreview(null);
             setSearch("");
+            setGroup("Todos");
+            setShowSecondary(false);
             setOpen(true);
           }}
         >
           {content}
         </button>
       ) : (
-        <div className={className}>{content}</div>
+        <div className={`${className} ${secondary ? "rounded-b-none border-b-0" : ""}`}>{content}</div>
       )}
+
+      {secondary && <button type="button" disabled={!secondary.people.length}
+        onClick={() => { setShowSecondary(true); setSearch(""); setPreview(null); setOpen(true); }}
+        className={`w-full rounded-b-2xl border border-t-0 px-5 pb-5 text-left text-xs font-semibold disabled:cursor-default ${accent ? "border-brand-blue bg-brand-blue text-white" : "border-brand-line bg-white text-brand-gray"}`}>
+        {secondary.label}: {secondary.people.length}
+      </button>}
 
       {preview && interactive && !open &&
         createPortal(
@@ -193,15 +229,15 @@ export function EmployeePeopleCard({
               <header className="border-b border-brand-line p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs text-brand-muted">Guía I</p>
+                    <p className="text-xs text-brand-muted">{guideLabel}{exportYear ? ` · ${exportYear}` : ""}</p>
                     <h2
                       id={`${id}-title`}
                       className="mt-2 font-display text-xl font-bold text-brand-gray"
                     >
-                      Empleados · {label}
+                      Empleados · {panelLabel}
                     </h2>
                     <p className="mt-2 text-sm text-brand-muted">
-                      {people.length} {people.length === 1 ? "persona" : "personas"}
+                      {panelPeople.length} {panelPeople.length === 1 ? "persona" : "personas"}
                     </p>
                   </div>
                   <button
@@ -213,6 +249,11 @@ export function EmployeePeopleCard({
                     ✕
                   </button>
                 </div>
+                {groups && !showSecondary && <div className="mt-4 flex flex-wrap gap-2">
+                  {["Todos", ...groups.map(item => item.label)].map(option => <button type="button" key={option}
+                    aria-pressed={group === option} onClick={() => setGroup(option)}
+                    className={`rounded-lg px-3 py-2 text-sm ${group === option ? "bg-brand-blue text-white" : "bg-brand-light text-brand-gray"}`}>{option}</button>)}
+                </div>}
                 <label className="mt-5 block">
                   <span className="sr-only">Buscar empleado</span>
                   <input
@@ -222,6 +263,10 @@ export function EmployeePeopleCard({
                     className="w-full rounded-xl border border-brand-line px-4 py-3 text-sm outline-none focus:border-brand-blue"
                   />
                 </label>
+                {groups && !showSecondary && <button type="button" disabled={!filtered.length} onClick={exportList}
+                  className="mt-3 rounded-lg border border-brand-line px-3 py-2 text-sm font-semibold text-brand-blue disabled:opacity-50">
+                  Exportar {group === "Todos" ? "ambos niveles" : group.toLowerCase()} · {filtered.length}
+                </button>}
               </header>
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6">
                 <ul className="divide-y divide-brand-line">
@@ -233,6 +278,9 @@ export function EmployeePeopleCard({
                         readOnly={readOnly}
                         returnTo={returnTo}
                       />
+                      {personDetails?.[person.studentId] && <div className="mt-3 space-y-1 rounded-lg bg-brand-light p-3">
+                        {personDetails[person.studentId].map((detail, index) => <p key={detail} className={index === 0 ? "text-sm font-semibold text-brand-gray" : "text-xs text-brand-muted"}>{detail}</p>)}
+                      </div>}
                     </li>
                   ))}
                 </ul>

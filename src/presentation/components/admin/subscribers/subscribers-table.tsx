@@ -51,8 +51,8 @@ export function SubscribersTable({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-brand-line bg-white">
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-left text-sm">
+      <div className="min-w-0">
+        <table className="responsive-table text-left text-sm">
           <thead className="border-b border-brand-line bg-brand-light/50 text-xs uppercase tracking-wide text-brand-muted">
             <tr>
               <th className="px-4 py-3 font-semibold">Nombre</th>
@@ -66,18 +66,18 @@ export function SubscribersTable({
           <tbody>
             {subscribers.map((subscriber) => (
               <tr key={subscriber.id} className="border-b border-brand-line last:border-0">
-                <td className="px-4 py-3 font-medium text-brand-gray">{subscriber.name}</td>
-                <td className="px-4 py-3 text-brand-muted">
+                <td data-label="Nombre" className="px-4 py-3 font-medium text-brand-gray">{subscriber.name}</td>
+                <td data-label="Correo" className="px-4 py-3 text-brand-muted">
                   <a href={`mailto:${subscriber.email}`} className="hover:text-brand-blue">
                     {subscriber.email}
                   </a>
                 </td>
-                <td className="px-4 py-3 text-brand-muted">{subscriber.company || "—"}</td>
-                <td className="px-4 py-3">
+                <td data-label="Empresa" className="px-4 py-3 text-brand-muted">{subscriber.company || "—"}</td>
+                <td data-label="Estado" className="px-4 py-3">
                   <StatusBadge status={subscriber.status} />
                 </td>
-                <td className="px-4 py-3 text-brand-muted">{formatDate(subscriber.createdAt)}</td>
-                <td className="px-4 py-3">
+                <td data-label="Fecha" className="px-4 py-3 text-brand-muted">{formatDate(subscriber.createdAt)}</td>
+                <td data-label="Acciones" className="px-4 py-3">
                   <button
                     type="button"
                     onClick={() => onToggleStatus(subscriber)}

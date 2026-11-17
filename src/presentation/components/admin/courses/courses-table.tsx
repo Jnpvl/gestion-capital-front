@@ -60,8 +60,8 @@ export function CoursesTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[720px] text-left text-sm">
+    <div className="min-w-0">
+      <table className="responsive-table text-left text-sm">
         <thead className="border-b border-brand-line bg-brand-light/60 text-xs uppercase tracking-wide text-brand-muted">
           <tr>
             <th className="px-6 py-3 font-semibold">Curso</th>
@@ -83,7 +83,7 @@ export function CoursesTable({
 
             return (
               <tr key={course.id} className="hover:bg-brand-light/40">
-                <td className="px-6 py-4">
+                <td data-label="Curso" className="px-6 py-4">
                   <div className="font-medium text-brand-gray">{course.title}</div>
                   <div className="mt-0.5 text-xs text-brand-muted">
                     /{course.slug}
@@ -91,21 +91,21 @@ export function CoursesTable({
                   </div>
                 </td>
                 {showInstructor && (
-                  <td className="px-4 py-4 text-brand-muted">
+                  <td data-label="Instructor" className="px-4 py-4 text-brand-muted">
                     {course.instructorName?.trim() || (
                       <span className="italic text-brand-muted/80">Sin asignar</span>
                     )}
                   </td>
                 )}
-                <td className="px-4 py-4">
+                <td data-label="Publicación" className="px-4 py-4">
                   <CourseStatusBadge status={course.status} />
                 </td>
-                <td className="px-4 py-4 text-brand-muted">{course.lessonsCount}</td>
-                <td className="px-4 py-4 text-brand-muted">{course.studentsCount}</td>
-                <td className="px-4 py-4 text-brand-muted">
+                <td data-label="Clases" className="px-4 py-4 text-brand-muted">{course.lessonsCount}</td>
+                <td data-label="Estudiantes" className="px-4 py-4 text-brand-muted">{course.studentsCount}</td>
+                <td data-label="Catálogo" className="px-4 py-4 text-brand-muted">
                   {course.showInCatalog ? "Sí" : "No"}
                 </td>
-                <td className="px-6 py-4 text-right">
+                <td data-label="Acciones" className="px-6 py-4 text-right">
                   <div className="inline-flex items-center gap-2">
                     <Tooltip label="Editar curso">
                       <Link
