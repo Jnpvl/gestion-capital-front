@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { EmployeeRiskBar, type RiskBarPerson } from "./employee-risk-bar";
-import { DashboardEmployeeLink } from "./dashboard-employee-link";
 import { EmployeePeopleCard } from "./employee-people-card";
 import {
   ScoringScopeTrigger,
   type ScoringScope,
 } from "./scoring-scope-trigger";
 import {
+  samplingBadgeLabel,
   RISK_LEVEL_COLOR,
   RISK_LEVEL_LABEL,
   type CompanyDashboardResponse,
@@ -426,7 +426,7 @@ function Radar({ groups }: { groups: Group[] }) {
   );
 }
 
-export function CompanyDashboardCharts({ data, guide, readOnly, returnTo, active = true }: { data: CompanyDashboardResponse; guide: "nom035_guia2" | "nom035_guia3"; readOnly: boolean; returnTo: string; active?: boolean }) {
+export function CompanyDashboardCharts({ data, guide, readOnly, returnTo, onOpenReferrals, active = true }: { data: CompanyDashboardResponse; guide: "nom035_guia2" | "nom035_guia3"; readOnly: boolean; returnTo: string; onOpenReferrals: () => void; active?: boolean }) {
   const guideLabel = guide === "nom035_guia2" ? "Guía II" : "Guía III";
   const [form, setForm] = useState<FormDefinition | null>(null);
   useEffect(() => {
@@ -466,17 +466,21 @@ export function CompanyDashboardCharts({ data, guide, readOnly, returnTo, active
   const highCount = results.filter(r => r.level === "alto").length;
   const veryHighCount = results.filter(r => r.level === "muy_alto").length;
   const globalHighPeople = results.filter(r => r.level === "alto" || r.level === "muy_alto");
-  const referralCandidates = guide === "nom035_guia2"
-    ? results.flatMap(person => {
-        const violence = person.domains.find(domain => domain.key === "violencia");
-        return violence && (violence.level === "alto" || violence.level === "muy_alto")
-          ? [{ ...person, level: violence.level }] : [];
-      })
-    : globalHighPeople;
-  // Conectar a los registros de seguimiento cuando se implemente la canalización.
-  const referredPeople: RiskBarPerson[] = [];
-  const pendingReferralPeople = referralCandidates.filter(person =>
-    !referredPeople.some(referred => referred.studentId === person.studentId));
+  const generalIds = new Set(globalHighPeople.map(person => person.studentId));
+  const violenceIds = new Set(violencePeople.map(person => person.studentId));
+  const referralCandidates = [...new Map(results
+    .filter(person => generalIds.has(person.studentId) || violenceIds.has(person.studentId))
+    .map(person => [person.studentId, person])).values()];
+  const referralDetails = Object.fromEntries(referralCandidates.map(person => {
+    const general = generalIds.has(person.studentId);
+    const violence = violenceIds.has(person.studentId);
+    const violenceLevel = person.domains.find(domain => domain.key === "violencia")?.level;
+    return [person.studentId, [
+      `Motivo: ${general && violence ? "Ambos" : general ? "Riesgo general" : "Violencia"}`,
+      `Riesgo general: ${person.level ? RISK_LEVEL_LABEL[person.level] : "Sin resultado"}`,
+      `Violencia: ${violenceLevel ? RISK_LEVEL_LABEL[violenceLevel] : "Sin resultado"}`,
+    ]];
+  }));
   const peopleByIndex: RiskBarPerson[][] = !selected ? [] : [
     results,
     results.filter((person) => person.level === "alto"),
@@ -486,8 +490,7 @@ export function CompanyDashboardCharts({ data, guide, readOnly, returnTo, active
       .map((employee) => ({ studentId: employee.studentId, name: employee.employeeName })),
     globalHighPeople,
     results,
-    referredPeople,
-    pendingReferralPeople,
+    referralCandidates,
     violencePeople,
   ];
   const summaryCards = [
@@ -496,21 +499,31 @@ export function CompanyDashboardCharts({ data, guide, readOnly, returnTo, active
     { label: "Riesgo muy alto", value: veryHighCount, note: `${number.format(pct(veryHighCount, results.length))}% de los evaluados` },
     { label: "Sin resultado disponible", value: data.employees.length - results.length, note: "Pendientes, parciales o sin resultado" },
     { label: "Riesgo alto y muy alto", value: high, note: `${high} de ${results.length} evaluados · ${number.format(pct(high, results.length))}%` },
-    { label: "Calificacion final", value: average == null ? "—" : number.format(average), note: "Referencia del promedio; no sustituye el riesgo individual" },
-    { label: "Canalizaciones realizadas", value: referredPeople.length, note: "Personas canalizadas en este año" },
-    { label: "Pendientes de canalizar", value: pendingReferralPeople.length, note: guide === "nom035_guia2" ? "Dominio Violencia: alto o muy alto" : "Personas con riesgo alto o muy alto" },
+    { label: "Calificación final", value: average == null ? "—" : number.format(average), note: "Referencia del promedio; no sustituye el riesgo individual" },
+    { label: "Seguimiento de canalización", value: referralCandidates.length, note: "Riesgo general o violencia alto y muy alto · personas sin duplicar" },
     { label: "Detectados con violencia", value: violenceDomain ? violencePeople.length : "—", note: violenceDomain
       ? `Dominio Violencia · ${violencePeople.length} de ${violenceDomain.count} evaluados · ${number.format(pct(violencePeople.length, violenceDomain.count))}%`
       : "Sin resultados del dominio Violencia" },
   ]
     .map((card, index) => ({ card, index }))
-    .filter(({ index }) => index !== 1 && index !== 2)
-    .sort((a, b) => [0, 5, 3, 4, 8, 6, 7].indexOf(a.index) - [0, 5, 3, 4, 8, 6, 7].indexOf(b.index));
+    .filter(({ index }) => index !== 1 && index !== 2 && index !== 3)
+    .sort((a, b) => [0, 5, 4, 7, 6].indexOf(a.index) - [0, 5, 4, 7, 6].indexOf(b.index));
   const renderSummaryCard = ({ card, index }: (typeof summaryCards)[number]) => (
     <EmployeePeopleCard
       key={card.label}
       label={card.label}
-      icon={index === 8 ? <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5 shrink-0 text-red-600"><path d="M12 3 4 6v6c0 4 4 7 8 9 4-2 8-5 8-9V6l-8-3Z" /><path d="M12 7v6m0 3v1" /></svg> : undefined}
+      personDetails={index === 6 ? referralDetails : undefined}
+      allowEmpty={index === 6}
+      onActivate={index === 6 ? onOpenReferrals : undefined}
+      guideLabel={guideLabel}
+      exportYear={data.evaluationYear}
+      subtitle={index === 0 && guide === "nom035_guia3" ? samplingBadgeLabel(data.sampling?.nom035_guia3) : undefined}
+      secondary={index === 0 ? { label: "Sin resultados disponibles", people: peopleByIndex[3] ?? [] } : undefined}
+      groups={index === 4 ? [
+        { label: "Alto", people: peopleByIndex[1] ?? [] },
+        { label: "Muy alto", people: peopleByIndex[2] ?? [] },
+      ] : undefined}
+      icon={index === 7 ? <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5 shrink-0 text-red-600"><path d="M12 3 4 6v6c0 4 4 7 8 9 4-2 8-5 8-9V6l-8-3Z" /><path d="M12 7v6m0 3v1" /></svg> : undefined}
       value={selected ? card.value : "—"}
       note={selected ? card.note : `${guideLabel} sin asignar`}
       accent={index === 0}
@@ -524,7 +537,7 @@ export function CompanyDashboardCharts({ data, guide, readOnly, returnTo, active
       breakdown={index === 4 && selected ? [
         { label: "Alto", value: highCount, ...RISK_LEVEL_COLOR.alto },
         { label: "Muy alto", value: veryHighCount, ...RISK_LEVEL_COLOR.muy_alto },
-      ] : index === 8 && selected && violenceDomain ? [
+      ] : index === 7 && selected && violenceDomain ? [
         { label: "Alto", value: violenceDomain.levels.alto, ...RISK_LEVEL_COLOR.alto },
         { label: "Muy alto", value: violenceDomain.levels.muy_alto, ...RISK_LEVEL_COLOR.muy_alto },
       ] : undefined}
@@ -538,11 +551,11 @@ export function CompanyDashboardCharts({ data, guide, readOnly, returnTo, active
       <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {summaryCards.slice(0, 4).map(renderSummaryCard)}
       </div>
-      <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4">
         {summaryCards.slice(4).map(renderSummaryCard)}
       </div>
     </div>
-    <div className="grid items-stretch gap-6 xl:grid-cols-2">
+    <div className="grid items-stretch gap-6">
       <div className="rounded-2xl border border-brand-line bg-white p-6">
         <h3 className="font-display font-bold text-brand-gray">Distribución de resultados</h3>
         <p className="mt-2 text-sm text-brand-muted">
@@ -612,124 +625,6 @@ export function CompanyDashboardCharts({ data, guide, readOnly, returnTo, active
         )}
       </div>
 
-      <div className="rounded-2xl border border-brand-line bg-white p-6">
-        <h3 className="font-display font-bold text-brand-gray">Seguimiento de canalización</h3>
-        <p className="mt-2 text-sm text-brand-muted">
-          {guide === "nom035_guia2"
-            ? "Personas con nivel alto o muy alto en el dominio Violencia."
-            : "Personas con riesgo alto o muy alto · revisión para decidir canalización."}
-        </p>
-        <div className="mt-5 grid gap-4 sm:grid-cols-3">
-          {[
-            {
-              label: guide === "nom035_guia2" ? "Detectados con violencia" : "Total alto y muy alto",
-              value: referralCandidates.length,
-              style: "bg-slate-50 text-slate-700",
-            },
-            { label: "Canalizadas", value: referredPeople.length, style: "bg-green-50 text-green-700" },
-            {
-              label: "Pendientes de canalizar",
-              value: pendingReferralPeople.length,
-              style: "bg-amber-50 text-amber-700",
-            },
-          ].map((item) => (
-            <div key={item.label} className={`rounded-xl p-4 ${item.style}`}>
-              <p className="text-xs font-semibold">{item.label}</p>
-              <p className="mt-2 text-2xl font-bold">{selected ? item.value : "—"}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-5">
-          <EmployeeRiskBar
-            label={`Seguimiento de canalización · ${guideLabel}`}
-            readOnly={readOnly}
-            returnTo={returnTo}
-            segments={[
-              {
-                key: "referred",
-                label: "Canalizadas",
-                color: "#16a34a",
-                count: referredPeople.length,
-                people: referredPeople,
-              },
-              {
-                key: "pending",
-                label: "Pendientes de canalizar",
-                color: "#d97706",
-                count: pendingReferralPeople.length,
-                people: pendingReferralPeople,
-              },
-            ]}
-          />
-        </div>
-        {referralCandidates.length > 0 && (
-          <p className="mt-3 text-sm font-medium text-brand-muted">
-            {number.format(pct(referredPeople.length, referralCandidates.length))}% de avance
-          </p>
-        )}
-        {referralCandidates.length > 0 && (
-          <div className="mt-6 overflow-x-auto rounded-xl border border-brand-line">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-brand-light text-brand-muted">
-                <tr>
-                  {[
-                    "Empleado",
-                    guide === "nom035_guia2" ? "Nivel en Violencia" : "Nivel de riesgo",
-                    "Estado",
-                  ].map((label) => (
-                    <th key={label} className="px-4 py-3 font-semibold">
-                      {label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-brand-line">
-                {referralCandidates.map((person) => {
-                  const referred = referredPeople.some((item) => item.studentId === person.studentId);
-                  return (
-                    <tr key={person.studentId}>
-                      <td className="px-4 py-4">
-                        <DashboardEmployeeLink
-                          studentId={person.studentId}
-                          name={person.name}
-                          readOnly={readOnly}
-                          returnTo={returnTo}
-                        />
-                      </td>
-                      <td className="px-4 py-4">
-                        <span
-                          className="rounded-lg px-3 py-1 text-xs font-semibold"
-                          style={RISK_LEVEL_COLOR[person.level!]}
-                        >
-                          {RISK_LEVEL_LABEL[person.level!]}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span
-                          className={`whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold ${
-                            referred ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
-                          }`}
-                        >
-                          {referred ? "Canalización realizada" : "Pendiente de canalizar"}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {!referralCandidates.length && (
-          <p className="mt-4 text-sm text-brand-muted">
-            {results.length
-              ? guide === "nom035_guia2"
-                ? "Sin personas con nivel alto o muy alto en Violencia."
-                : "Sin personas pendientes de revisión por riesgo alto o muy alto."
-              : "Sin resultados disponibles en este año."}
-          </p>
-        )}
-      </div>
     </div>
     <div className="grid items-start gap-6 xl:grid-cols-2">
       <div className="rounded-2xl border border-brand-line bg-white p-6">

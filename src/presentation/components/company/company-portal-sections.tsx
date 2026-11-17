@@ -33,6 +33,19 @@ export function CompanyPortalGeneral() {
             employerRepresentative: company.employerRepresentative ?? "",
             workersRepresentative: company.workersRepresentative ?? "",
             workersCount: company.workersCount != null ? String(company.workersCount) : "",
+            activityMain: company.activityMain ?? "",
+            address: company.address ?? "",
+            addressStreet: company.addressStreet ?? "",
+            addressExteriorNumber: company.addressExteriorNumber ?? "",
+            addressInteriorNumber: company.addressInteriorNumber ?? "",
+            addressNeighborhood: company.addressNeighborhood ?? "",
+            addressPostalCode: company.addressPostalCode ?? "",
+            addressCity: company.addressCity ?? "",
+            addressMunicipality: company.addressMunicipality ?? "",
+            addressState: company.addressState ?? "",
+            addressCountry: company.addressCountry ?? "",
+            addressBetweenStreet1: company.addressBetweenStreet1 ?? "",
+            addressBetweenStreet2: company.addressBetweenStreet2 ?? "",
           }}
         />
       </div>

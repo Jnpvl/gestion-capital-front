@@ -188,66 +188,12 @@ export function CompanyDetailContent({ companyId }: CompanyDetailContentProps) {
           role="tabpanel"
           id="panel-general"
           aria-labelledby="tab-general"
-          className="grid gap-6 lg:grid-cols-3"
+          className="space-y-6"
         >
-          <div className="space-y-6 lg:col-span-1">
-          <div className="rounded-2xl border border-brand-line bg-white p-6">
-            <h2 className="font-display text-lg font-bold text-brand-gray">
-              Resumen
-            </h2>
-            <dl className="mt-4 space-y-3 text-sm">
-              <div>
-                <dt className="text-brand-muted">RFC</dt>
-                <dd className="font-medium text-brand-gray">
-                  {company.rfc || "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-brand-muted">Trabajadores vinculados</dt>
-                <dd className="font-medium text-brand-gray">
-                  {company.studentsCount}
-                </dd>
-                <p className="mt-1 text-xs text-brand-muted">
-                  Se actualiza al vincular alumnos con esta empresa.
-                </p>
-              </div>
-              <div>
-                <dt className="text-brand-muted">Patrón o representante</dt>
-                <dd className="font-medium text-brand-gray">
-                  {company.employerRepresentative || "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-brand-muted">
-                  Representante de trabajadores
-                </dt>
-                <dd className="font-medium text-brand-gray">
-                  {company.workersRepresentative || "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-brand-muted">Registrada</dt>
-                <dd className="font-medium text-brand-gray">
-                  {new Date(company.createdAt).toLocaleDateString("es-MX")}
-                </dd>
-              </div>
-            </dl>
+          <div className="rounded-2xl border border-brand-line bg-white p-4 sm:p-6">
+            <CompanyEditForm key={company.id} company={company} onUpdated={setCompany} />
           </div>
           <CompanyAccessSection company={company} onUpdated={setCompany} />
-          </div>
-
-          <div className="rounded-2xl border border-brand-line bg-white p-6 lg:col-span-2">
-            <h2 className="font-display text-lg font-bold text-brand-gray">
-              Editar información
-            </h2>
-            <p className="mt-1 text-sm text-brand-muted">
-              Los datos se usan al vincular estudiantes con empresa y en
-              constancias DC3.
-            </p>
-            <div className="mt-6">
-              <CompanyEditForm company={company} onUpdated={setCompany} />
-            </div>
-          </div>
         </div>
       )}
     </div>

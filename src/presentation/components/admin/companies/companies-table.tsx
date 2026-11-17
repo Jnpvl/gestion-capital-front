@@ -33,15 +33,16 @@ export function CompaniesTable({ companies, isLoading }: CompaniesTableProps) {
 
   return (
     <>
-      <div className="hidden md:block">
-        <table className="w-full text-left text-sm">
+      <div className="hidden min-w-0 md:block">
+        <table className="w-full table-fixed text-left text-sm [&_td]:[overflow-wrap:anywhere] [&_th]:[overflow-wrap:anywhere]">
           <thead className="border-b border-brand-line bg-brand-light/50 text-xs uppercase tracking-wide text-brand-muted">
             <tr>
               <th className="px-4 py-3 font-medium">Empresa</th>
               <th className="px-4 py-3 font-medium">RFC</th>
+              <th className="px-4 py-3 font-medium">Actividad principal</th>
               <th className="hidden px-4 py-3 font-medium lg:table-cell">Trabajadores</th>
               <th className="hidden px-4 py-3 font-medium xl:table-cell">Patrón / representante</th>
-              <th className="px-4 py-3 font-medium text-right">Acciones</th>
+              <th className="w-24 px-4 py-3 font-medium text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-brand-line">
@@ -58,10 +59,13 @@ export function CompaniesTable({ companies, isLoading }: CompaniesTableProps) {
                   </Link>
                 </td>
                 <td className="px-4 py-3 text-brand-muted">{company.rfc || "—"}</td>
+                <td className="px-4 py-3 text-brand-muted">
+                  {company.activityMain || "—"}
+                </td>
                 <td className="hidden px-4 py-3 text-brand-muted lg:table-cell">
                   {company.studentsCount}
                 </td>
-                <td className="hidden max-w-[220px] truncate px-4 py-3 text-brand-muted xl:table-cell">
+                <td className="hidden px-4 py-3 text-brand-muted xl:table-cell">
                   {company.employerRepresentative || "—"}
                 </td>
                 <td className="px-4 py-3 text-right">
@@ -89,6 +93,7 @@ export function CompaniesTable({ companies, isLoading }: CompaniesTableProps) {
             className="block px-4 py-4 hover:bg-brand-light/40"
           >
             <p className="font-medium text-brand-gray">{company.name}</p>
+            <p className="mt-1 break-words text-xs text-brand-muted">Actividad principal: {company.activityMain || "—"}</p>
             <p className="mt-1 text-xs text-brand-muted">
               RFC: {company.rfc || "—"} · {company.studentsCount} trabajador
               {company.studentsCount === 1 ? "" : "es"} vinculado

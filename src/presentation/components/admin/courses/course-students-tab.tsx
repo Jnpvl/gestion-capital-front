@@ -377,11 +377,11 @@ export function CourseStudentsTab({ courseId }: CourseStudentsTabProps) {
           No hay alumnos con ese filtro.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
+        <div className="min-w-0">
+          <table className="responsive-table text-left text-sm">
             <thead>
               <tr className="border-b border-brand-line text-xs uppercase tracking-wide text-brand-muted">
-                <th className="w-10 px-3 py-2">
+                <th data-label="Seleccionar todos" className="w-10 px-3 py-2">
                   <input
                     type="checkbox"
                     aria-label="Seleccionar alumnos visibles con documentos disponibles"
@@ -403,7 +403,7 @@ export function CourseStudentsTab({ courseId }: CourseStudentsTabProps) {
             <tbody>
               {filteredEnrollments.map((enrollment) => (
                 <tr key={enrollment.id} className="border-b border-brand-line last:border-0">
-                  <td className="px-3 py-3">
+                  <td data-label="Seleccionar" className="px-3 py-3">
                     <input
                       type="checkbox"
                       aria-label={`Seleccionar a ${enrollment.studentName}`}
@@ -415,7 +415,7 @@ export function CourseStudentsTab({ courseId }: CourseStudentsTabProps) {
                       className="size-4 rounded border-brand-line text-brand-blue focus:ring-brand-blue disabled:opacity-40"
                     />
                   </td>
-                  <td className="px-3 py-3">
+                  <td data-label="Alumno" className="px-3 py-3">
                     <Link
                       href={`/admin/alumnos/${enrollment.studentId}`}
                       className="font-medium text-brand-gray hover:text-brand-blue"
@@ -427,14 +427,14 @@ export function CourseStudentsTab({ courseId }: CourseStudentsTabProps) {
                       {enrollment.enrolledViaCompany ? "Con empresa" : "Particular"}
                     </p>
                   </td>
-                  <td className="px-3 py-3 text-brand-gray">
+                  <td data-label="Modalidad" className="px-3 py-3 text-brand-gray">
                     {DELIVERY_MODE_LABELS[enrollment.deliveryMode]}
                   </td>
-                  <td className="px-3 py-3 text-brand-gray">{enrollment.periodLabel}</td>
-                  <td className="px-3 py-3 font-mono text-xs text-brand-gray">
+                  <td data-label="Periodo" className="px-3 py-3 text-brand-gray">{enrollment.periodLabel}</td>
+                  <td data-label="Folio" className="px-3 py-3 font-mono text-xs text-brand-gray">
                     {enrollment.certificateNumber ?? "—"}
                   </td>
-                  <td className="px-3 py-3">
+                  <td data-label="Estado" className="px-3 py-3">
                     <span
                       className={cn(
                         "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
@@ -446,8 +446,8 @@ export function CourseStudentsTab({ courseId }: CourseStudentsTabProps) {
                       {enrollment.completed ? "Terminado" : "En curso"}
                     </span>
                   </td>
-                  <td className="px-3 py-3 text-brand-gray">{enrollment.progressPercent}%</td>
-                  <td className="px-3 py-3">
+                  <td data-label="Progreso" className="px-3 py-3 text-brand-gray">{enrollment.progressPercent}%</td>
+                  <td data-label="Acciones" className="px-3 py-3">
                     <div className="flex flex-col items-end gap-1">
                       {enrollment.deliveryMode === "presencial" && !enrollment.completed && (
                         <button

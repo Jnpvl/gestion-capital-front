@@ -1,5 +1,4 @@
 import { CompanyDashboardGuide1Responses } from "./company-dashboard-guide1-responses";
-import { DashboardEmployeeLink } from "./dashboard-employee-link";
 import { EmployeePeopleCard } from "./employee-people-card";
 import { EmployeeRiskBar } from "./employee-risk-bar";
 import {
@@ -10,7 +9,7 @@ import {
 
 const format = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 1 });
 
-export function CompanyDashboardClinical({ data, readOnly = false, returnTo }: { data: CompanyDashboardResponse; readOnly?: boolean; returnTo: string }) {
+export function CompanyDashboardClinical({ data, readOnly = false, returnTo, onOpenReferrals }: { data: CompanyDashboardResponse; readOnly?: boolean; returnTo: string; onOpenReferrals: () => void }) {
   const assigned = data.assignedFormKeys.includes("nom035_guia1");
   const evaluated = assigned ? data.employees.flatMap(employee => {
     const cell = employee.forms.nom035_guia1;
@@ -33,15 +32,8 @@ export function CompanyDashboardClinical({ data, readOnly = false, returnTo }: {
   const reportedPeople = evaluated.filter(e => e.event === true).map(e => ({ studentId: e.id, name: e.name }));
   const withoutEventPeople = evaluated.filter(e => e.event === false).map(e => ({ studentId: e.id, name: e.name }));
   const requires = requiresPeople.length;
-  // No hay registros de canalización todavía; conectar este listado al implementar el seguimiento.
-  const referred: { studentId: string; name: string }[] = [];
-  const pendingReferral = requiresPeople.filter(
-    (person) => !referred.some((entry) => entry.studentId === person.studentId),
-  );
   const reported = reportedPeople.length;
-  const withoutEvent = withoutEventPeople.length;
   const eventsKnown = evaluated.every(e => typeof e.event === "boolean");
-  const remaining = pendingPeople.length;
   const percent = (count: number, total: number) => total ? count / total * 100 : 0;
   const requiresLabel = clinicalResultText(true);
   const notRequiresLabel = clinicalResultText(false);
@@ -59,7 +51,7 @@ export function CompanyDashboardClinical({ data, readOnly = false, returnTo }: {
   ];
   const cards = [
     {
-      label: "Participaciones",
+      label: "Participantes",
       value: assigned ? `${evaluated.length} / ${data.employees.length}` : "—",
       note: `${format.format(percent(evaluated.length, data.employees.length))}% de los empleados`,
       people: evaluatedPeople,
@@ -78,54 +70,48 @@ export function CompanyDashboardClinical({ data, readOnly = false, returnTo }: {
       people: notRequiresPeople,
     },
     {
-      label: "Sin resultado disponible",
-      value: assigned ? remaining : "—",
-      note: assigned ? "Pendientes, parciales o sin resultado" : "Guía I sin asignar",
-      people: pendingPeople,
-    },
-    {
-      label: "I.- Acontecimiento traumático severo",
+      label: "Acontecimiento traumático severo",
       value: evaluated.length && eventsKnown ? reported : "—",
       note: "Al menos un Sí en la sección I",
       people: eventsKnown ? reportedPeople : [],
     },
-    {
-      label: "Sin acontecimiento traumático severo",
-      value: evaluated.length && eventsKnown ? withoutEvent : "—",
-      note: "Todas las respuestas de la sección I son No",
-      people: eventsKnown ? withoutEventPeople : [],
-    },
-    {
-      label: "Canalizaciones realizadas",
-      value: assigned ? referred.length : "—",
-      note: "Personas canalizadas en este año",
-      people: referred,
-    },
-    {
-      label: "Pendientes de canalizar",
-      value: assigned ? pendingReferral.length : "—",
-      note: `Personas con resultado “${requiresLabel}” pendientes de canalizar`,
-      people: assigned ? pendingReferral : [],
-    },
+
   ];
 
   return <section className="space-y-6" aria-label="Resultados de Guía I">
     <div><p className="text-xs font-semibold uppercase tracking-widest text-brand-blue">Guía I · {data.evaluationYear}</p><h2 className="mt-1 font-display text-2xl font-bold text-brand-gray">Guía de Referencia I · Resultado</h2></div>
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {cards.map((card) => (
-        <EmployeePeopleCard
-          key={card.label}
-          label={card.label}
-          value={card.value}
-          note={card.note}
-          people={card.people}
-          readOnly={readOnly}
-          returnTo={returnTo}
-          accent={card.accent}
-        />
-      ))}
+    <div className="space-y-4">
+      <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {cards.slice(0, 4).map((card, index) => (
+          <EmployeePeopleCard
+            key={card.label}
+            label={card.label}
+            value={card.value}
+            note={assigned ? card.note : "Guía I sin asignar"}
+            people={card.people}
+            readOnly={readOnly}
+            returnTo={returnTo}
+            guideLabel="Guía I"
+            exportYear={data.evaluationYear}
+            accent={card.accent}
+            valueColor={index === 1 ? CLINICAL_RESULT_COLOR.requires.background : index === 2 ? CLINICAL_RESULT_COLOR.none.background : undefined}
+            secondary={index === 0 ? { label: "Sin resultados disponibles", people: pendingPeople } : index === 3 && eventsKnown ? { label: "Sin acontecimiento traumático severo", people: withoutEventPeople } : undefined}
+          />
+        ))}
+      </div>
+      <EmployeePeopleCard
+        label="Seguimiento de canalización"
+        value={assigned ? requiresPeople.length : "—"}
+        note="Personas que requieren valoración clínica"
+        people={requiresPeople}
+        readOnly={readOnly}
+        returnTo={returnTo}
+        guideLabel="Guía I"
+        exportYear={data.evaluationYear}
+        onActivate={onOpenReferrals}
+      />
     </div>
-    <div className="grid items-stretch gap-6 xl:grid-cols-2">
+    <div className="grid items-stretch gap-6">
       <div className="rounded-2xl border border-brand-line bg-white p-6">
         <h3 className="font-display font-bold text-brand-gray">Distribución de resultados</h3>
         <p className="mt-2 text-sm text-brand-muted">Distribución de resultados de Guía I · sobre {evaluated.length} evaluaciones completas.</p>
@@ -143,103 +129,6 @@ export function CompanyDashboardClinical({ data, readOnly = false, returnTo }: {
                 <p className="mt-2 text-2xl font-bold text-brand-gray">{group.count} <span className="text-sm font-normal text-brand-muted">· {format.format(percent(group.count, evaluated.length))}%</span></p></div>)}
           </div>
         </> : <p className="flex min-h-40 items-center justify-center text-sm text-brand-muted">{assigned ? "Sin resultados disponibles para esta distribución." : "Guía I no asignada en este año."}</p>}
-      </div>
-      <div className="rounded-2xl border border-brand-line bg-white p-6">
-        <h3 className="font-display font-bold text-brand-gray">Seguimiento de canalización</h3>
-        <p className="mt-2 text-sm text-brand-muted">
-          Personas con resultado “{requiresLabel}” · revisión para decidir canalización.
-        </p>
-        <div className="mt-5 grid gap-4 sm:grid-cols-3">
-          {[
-            { label: requiresLabel, count: requires, style: "bg-slate-50 text-slate-700" },
-            { label: "Canalizadas", count: referred.length, style: "bg-green-50 text-green-700" },
-            { label: "Pendientes de canalizar", count: pendingReferral.length, style: "bg-amber-50 text-amber-700" },
-          ].map((item) => (
-            <div key={item.label} className={`rounded-xl p-4 ${item.style}`}>
-              <p className="text-xs font-semibold">{item.label}</p>
-              <p className="mt-2 text-2xl font-bold tabular-nums">{assigned ? item.count : "—"}</p>
-            </div>
-          ))}
-        </div>
-        {requires > 0 ? (
-          <>
-            <div className="mt-5">
-              <EmployeeRiskBar
-                label="Seguimiento de canalización"
-                readOnly={readOnly}
-                returnTo={returnTo}
-                segments={[
-                  { key: "referred", label: "Canalizadas", color: "#16a34a", count: referred.length, people: referred },
-                  {
-                    key: "pending",
-                    label: "Pendientes de canalizar",
-                    color: "#d97706",
-                    count: pendingReferral.length,
-                    people: pendingReferral,
-                  },
-                ]}
-              />
-            </div>
-            <p className="mt-3 text-sm font-medium text-brand-muted">
-              {format.format(percent(referred.length, requires))}% de avance
-            </p>
-            <div className="mt-6 overflow-x-auto rounded-xl border border-brand-line">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-brand-light text-brand-muted">
-                  <tr>
-                    {["Empleado", "Resultado", "Estado"].map((label) => (
-                      <th key={label} className="px-4 py-3 font-semibold">
-                        {label}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-brand-line">
-                  {requiresPeople.map((person) => {
-                    const isReferred = referred.some((entry) => entry.studentId === person.studentId);
-                    return (
-                      <tr key={person.studentId}>
-                        <td className="px-4 py-4">
-                          <DashboardEmployeeLink
-                            studentId={person.studentId}
-                            name={person.name}
-                            readOnly={readOnly}
-                            returnTo={returnTo}
-                          />
-                        </td>
-                        <td className="px-4 py-4">
-                          <span
-                            className="rounded-lg px-3 py-1 text-xs font-semibold"
-                            style={CLINICAL_RESULT_COLOR.requires}
-                          >
-                            {requiresLabel}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span
-                            className={`whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold ${
-                              isReferred
-                                ? "bg-green-50 text-green-700"
-                                : "bg-amber-50 text-amber-700"
-                            }`}
-                          >
-                            {isReferred ? "Canalización realizada" : "Pendiente de canalizar"}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </>
-        ) : (
-          <p className="mt-4 text-sm text-brand-muted">
-            {evaluated.length
-              ? "Sin personas pendientes de revisión por atención clínica."
-              : "Sin resultados disponibles en este año."}
-          </p>
-        )}
       </div>
     </div>
 

@@ -17,12 +17,12 @@ export function CompanyDashboardGuia4() {
         </div>
         <a
           href={PDF_URL}
-          download="nom035-guia4.pdf"
+          download="nom035-guia4.docx"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex shrink-0 items-center rounded-lg bg-brand-black px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-gray"
         >
-          Descargar PDF
+          Descargar
         </a>
       </div>
 

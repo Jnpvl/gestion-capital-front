@@ -250,7 +250,7 @@ export function CompanyEmployeesSection({
             {readOnly ? "Trabajadores de tu empresa." : "Alumnos vinculados a esta empresa."}
           </p>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           {!readOnly && (
           <>
           <button
@@ -393,8 +393,8 @@ export function CompanyEmployeesSection({
         </div>
       ) : (
         <>
-          <div className="hidden overflow-x-auto md:block">
-            <table className="w-full text-left text-sm">
+          <div className="hidden min-w-0 xl:block">
+            <table className="w-full table-fixed text-left text-sm">
               <thead>
                 <tr className="border-b border-brand-line bg-brand-light/60">
                   {showSelect && (
@@ -510,7 +510,7 @@ export function CompanyEmployeesSection({
             </table>
           </div>
 
-          <div className="divide-y divide-brand-line md:hidden">
+          <div className="divide-y divide-brand-line xl:hidden">
             {employees.map((employee) => (
               <article key={employee.id} className="p-4">
                 <div className="flex items-start justify-between gap-3">

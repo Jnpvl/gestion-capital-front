@@ -486,12 +486,12 @@ export function CompanyCoursesTab({
                   Nadie de esta empresa tiene el curso con empresa.
                 </p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
+                <div className="min-w-0">
+                  <table className="responsive-table text-left text-sm">
                     <thead>
                       <tr className="border-b border-brand-line bg-brand-light/60 text-xs uppercase tracking-wide text-brand-muted">
                         {!readOnly && (
-                          <th className="w-10 px-4 py-3.5">
+                          <th data-label="Seleccionar empleados pendientes" className="w-10 px-4 py-3.5">
                             <input
                               type="checkbox"
                               aria-label="Seleccionar empleados presenciales pendientes"
@@ -516,7 +516,7 @@ export function CompanyCoursesTab({
                         return (
                           <tr key={enrollment.id}>
                             {!readOnly && (
-                              <td className="px-4 py-4">
+                              <td data-label="Seleccionar" className="px-4 py-4">
                                 <input
                                   type="checkbox"
                                   aria-label={`Seleccionar a ${enrollment.studentName}`}
@@ -529,19 +529,19 @@ export function CompanyCoursesTab({
                                 />
                               </td>
                             )}
-                            <td className="px-4 py-4">
+                            <td data-label="Empleado" className="px-4 py-4">
                               <p className="font-semibold text-brand-gray">{enrollment.studentName}</p>
                               <p className="mt-0.5 text-xs text-brand-muted">
                                 {enrollment.studentEmail}
                               </p>
                             </td>
-                            <td className="whitespace-nowrap px-4 py-4 text-brand-muted">
+                            <td data-label="Modalidad" className="whitespace-nowrap px-4 py-4 text-brand-muted">
                               {DELIVERY_MODE_LABELS[enrollment.deliveryMode]}
                             </td>
-                            <td className="whitespace-nowrap px-4 py-4 text-brand-gray">
+                            <td data-label="Progreso" className="whitespace-nowrap px-4 py-4 text-brand-gray">
                               {enrollment.progressPercent}%
                             </td>
-                            <td className="whitespace-nowrap px-4 py-4">
+                            <td data-label="Estado" className="whitespace-nowrap px-4 py-4">
                               <div className="flex flex-col items-start gap-1.5">
                                 {enrollment.completed ? (
                                   <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
@@ -563,7 +563,7 @@ export function CompanyCoursesTab({
                                 ) : null}
                               </div>
                             </td>
-                            <td className="px-6 py-4">
+                            <td data-label="Documentos" className="px-6 py-4">
                               {readOnly ? (
                                 enrollment.canDownloadCertificate || enrollment.canDownloadDc3 ? (
                                   <span className="text-xs font-semibold text-green-700">
@@ -699,8 +699,8 @@ export function CompanyCoursesTab({
               : "Aún no hay cursos asignados con empresa. Usa «Asignar curso a empleados» para dar acceso a todos los trabajadores vinculados."}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+          <div className="min-w-0">
+            <table className="responsive-table text-left text-sm">
               <thead>
                 <tr className="border-b border-brand-line bg-brand-light/60 text-xs uppercase tracking-wide text-brand-muted">
                   <th className="px-6 py-3.5 font-semibold">Curso</th>
@@ -717,23 +717,23 @@ export function CompanyCoursesTab({
                     className="cursor-pointer transition-colors hover:bg-brand-light/50"
                     onClick={() => setDetailCourseId(course.courseId)}
                   >
-                    <td className="px-6 py-4">
+                    <td data-label="Curso" className="px-6 py-4">
                       <p className="font-semibold text-brand-blue">{course.courseTitle}</p>
                       <p className="mt-1 text-xs text-brand-muted">
                         Con empresa · clic para ver detalle
                       </p>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-4 text-brand-muted">
+                    <td data-label="Modalidad" className="whitespace-nowrap px-4 py-4 text-brand-muted">
                       {deliveryLabel(course.deliveryModes)}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-4 text-right text-brand-gray">
+                    <td data-label="Asignados" className="whitespace-nowrap px-4 py-4 text-right text-brand-gray">
                       {course.activeCount}
                       <span className="text-brand-muted"> / {course.employeesTotal}</span>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-4 text-right text-brand-gray">
+                    <td data-label="Completados" className="whitespace-nowrap px-4 py-4 text-right text-brand-gray">
                       {course.completedCount}
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-brand-muted">
+                    <td data-label="Última asignación" className="whitespace-nowrap px-6 py-4 text-brand-muted">
                       {course.lastEnrolledAt
                         ? new Date(course.lastEnrolledAt).toLocaleDateString("es-MX")
                         : "—"}

@@ -1,5 +1,6 @@
 "use client";
 
+import { CompanyDashboardReferrals } from "./company-dashboard-referrals";
 import { DashboardEmployeeLink } from "./dashboard-employee-link";
 import { EmployeeRecordNumber } from "./employee-record-number";
 import { useSearchParams } from "next/navigation";
@@ -187,6 +188,7 @@ function DashboardContent({
     assigned.has("nom035_guia3") && { id: "psychosocial3", label: "Guía III" },
     { id: "guia4", label: "Guía IV" },
     hasGuia5 && { id: "demographics", label: "Guía V" },
+    { id: "referrals", label: "Canalizaciones" },
   ].filter(Boolean) as { id: string; label: string }[];
   const activeView = tabs.some((tab) => tab.id === view) ? view : (tabs[0]?.id ?? "general");
   const guia3Sampling = data.sampling?.nom035_guia3 ?? null;
@@ -205,15 +207,15 @@ function DashboardContent({
   const showDemographicFilters =
     activeView === "clinical" ||
     activeView === "psychosocial2" ||
-    activeView === "psychosocial3" || activeView === "demographics";
+    activeView === "psychosocial3" || activeView === "demographics" || activeView === "referrals";
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6">
     <div
-      className={`${activeView === "general" || showDemographicFilters ? "hidden" : "flex"} flex-wrap items-center gap-3 rounded-2xl border border-brand-line bg-white p-1.5 shadow-sm`}
+      className={`${activeView === "general" || activeView === "guia4" || showDemographicFilters ? "hidden" : "flex"} flex-wrap items-center gap-3 rounded-2xl border border-brand-line bg-white p-1.5 shadow-sm`}
       role="tablist"
       aria-label="Año de evaluación NOM-035"
-      hidden={activeView === "general" || showDemographicFilters}
+      hidden={activeView === "general" || activeView === "guia4" || showDemographicFilters}
     >
       <span className="shrink-0 px-3 text-xs font-semibold uppercase tracking-wide text-brand-muted">
         Año
@@ -270,7 +272,7 @@ function DashboardContent({
           </button>
         ))}
       </div>
-      {samplingBadge && (
+      {samplingBadge && activeView !== "psychosocial3" && (
         <span
           className={`mr-1.5 shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${
             guia3Sampling?.mode === "sample"
@@ -305,7 +307,7 @@ function DashboardContent({
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-brand-muted">Buscar empleado</span>
             <input type="search" value={employeeSearch} onChange={event => setEmployeeSearch(event.target.value)}
-              placeholder="Nombre o número de expediente (UUID)"
+              placeholder="Nombre o número de expediente"
               className="w-full rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm outline-none focus:border-brand-blue" />
           </label>
         </div>
@@ -315,19 +317,22 @@ function DashboardContent({
       </div>
     )}
     <div id="dashboard-panel-psychosocial2" role="tabpanel" aria-labelledby="dashboard-view-psychosocial2" hidden={activeView !== "psychosocial2"}>
-      <CompanyDashboardCharts active={activeView === "psychosocial2"} data={filteredData} guide="nom035_guia2" readOnly={readOnly} returnTo={returnTo} />
+      <CompanyDashboardCharts onOpenReferrals={() => setView("referrals")} active={activeView === "psychosocial2"} data={filteredData} guide="nom035_guia2" readOnly={readOnly} returnTo={returnTo} />
     </div>
     <div id="dashboard-panel-psychosocial3" role="tabpanel" aria-labelledby="dashboard-view-psychosocial3" hidden={activeView !== "psychosocial3"}>
-      <CompanyDashboardCharts active={activeView === "psychosocial3"} data={guia3ChartData} guide="nom035_guia3" readOnly={readOnly} returnTo={returnTo} />
+      <CompanyDashboardCharts onOpenReferrals={() => setView("referrals")} active={activeView === "psychosocial3"} data={guia3ChartData} guide="nom035_guia3" readOnly={readOnly} returnTo={returnTo} />
     </div>
     <div id="dashboard-panel-clinical" role="tabpanel" aria-labelledby="dashboard-view-clinical" hidden={activeView !== "clinical"}>
-      <CompanyDashboardClinical data={filteredData} readOnly={readOnly} returnTo={returnTo} />
+      <CompanyDashboardClinical onOpenReferrals={() => setView("referrals")} data={filteredData} readOnly={readOnly} returnTo={returnTo} />
     </div>
     <div id="dashboard-panel-guia4" role="tabpanel" aria-labelledby="dashboard-view-guia4" hidden={activeView !== "guia4"}>
       <CompanyDashboardGuia4 />
     </div>
     <div id="dashboard-panel-demographics" role="tabpanel" aria-labelledby="dashboard-view-demographics" hidden={activeView !== "demographics"}>
       <CompanyDashboardDemographics data={filteredData.demographics} employees={filteredData.employees} readOnly={readOnly} returnTo={returnTo} />
+    </div>
+    <div id="dashboard-panel-referrals" role="tabpanel" aria-labelledby="dashboard-view-referrals" hidden={activeView !== "referrals"}>
+      <CompanyDashboardReferrals data={filteredData} readOnly={readOnly} returnTo={returnTo} />
     </div>
     <div id="dashboard-panel-general" role="tabpanel" aria-labelledby="dashboard-view-general" hidden={activeView !== "general"}>
     <div className="rounded-2xl border border-brand-line bg-white">
@@ -343,8 +348,8 @@ function DashboardContent({
           {data.employees.length ? "No hay empleados que coincidan con la búsqueda y los filtros." : "Esta empresa aún no tiene empleados."}
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+        <div className="min-w-0">
+          <table className="responsive-table text-left text-sm">
             <thead>
               <tr className="border-b border-brand-line bg-brand-light/60 text-xs uppercase tracking-wide text-brand-muted">
                 <th className="px-6 py-3.5 font-semibold">Empleado</th>
@@ -370,14 +375,14 @@ function DashboardContent({
                 return (
                   <Fragment key={e.studentId}>
                     <tr>
-                      <td className="min-w-60 px-6 py-4 align-top font-medium text-brand-gray">
+                      <td data-label="Empleado" className="px-6 py-4 align-top font-medium text-brand-gray">
                         <DashboardEmployeeLink studentId={e.studentId} name={e.employeeName} readOnly={readOnly} returnTo={returnTo} />
                         <EmployeeRecordNumber id={e.studentId} />
                       </td>
                       {visibleGuides.map((g) => {
                         const id = `${e.studentId}:${g.key}`;
                         return (
-                          <td key={g.key} className="min-w-44 px-4 py-4 align-top">
+                          <td key={g.key} data-label={g.label} className="px-4 py-4 align-top">
                             <GuideCell
                               cell={e.forms[g.key]}
                               isOpen={open === id}
@@ -387,7 +392,7 @@ function DashboardContent({
                         );
                       })}
                       {hasGuia5 && (
-                        <td className="whitespace-nowrap px-6 py-4 text-brand-gray">{g5Label}</td>
+                        <td data-label="Guía V" className="px-6 py-4 text-brand-gray">{g5Label}</td>
                       )}
                     </tr>
                     {detail && (
