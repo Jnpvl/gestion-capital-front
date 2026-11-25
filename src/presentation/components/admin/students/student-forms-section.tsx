@@ -84,7 +84,7 @@ export function StudentFormsSection({ companyId, studentId, employeeName, readOn
           </select>
         </label>
         {!readOnly && (
-          <Link href={`/admin/empresas/${companyId}?tab=formularios`} className="text-sm font-semibold text-brand-blue hover:underline">
+          <Link href={`/admin/empresas/${companyId}?tab=dashboard&dashboardView=forms`} className="text-sm font-semibold text-brand-blue hover:underline">
             Ver formularios de la empresa →
           </Link>
         )}

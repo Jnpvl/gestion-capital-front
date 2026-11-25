@@ -7,10 +7,10 @@ export function AboutSection() {
   const { about, video } = homeContent;
 
   return (
-    <section aria-labelledby="about-heading" className="bg-white py-20 sm:py-24">
+    <section aria-labelledby="about-heading" className="bg-white py-16 sm:py-20">
       <Container>
-        <div className="grid items-stretch gap-12 lg:grid-cols-2 lg:gap-20">
-          <div className="mx-auto w-full max-w-sm lg:mx-0">
+        <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,18rem)_1fr] lg:gap-14">
+          <div className="mx-auto w-full max-w-[18rem] lg:mx-0">
             <div className="relative aspect-[9/16] overflow-hidden rounded-2xl bg-brand-gray">
               {video.src ? (
                 <AboutVideo src={video.src} />
@@ -22,7 +22,7 @@ export function AboutSection() {
             </div>
           </div>
 
-          <div className="flex flex-col lg:h-full lg:justify-between lg:py-2">
+          <div className="flex flex-col gap-5">
             <div>
               <SectionLabel>Sobre nosotros</SectionLabel>
               <h2
@@ -33,11 +33,11 @@ export function AboutSection() {
               </h2>
             </div>
 
-            <p className="mt-5 text-base leading-relaxed text-brand-muted sm:text-lg lg:mt-0">
+            <p className="text-base leading-relaxed text-brand-muted sm:text-lg">
               {about.paragraphs[0]}
             </p>
 
-            <div className="mt-6 space-y-5 border-t border-brand-line pt-6 lg:mt-0">
+            <div className="space-y-4 border-t border-brand-line pt-5">
               {about.paragraphs.slice(1).map((paragraph) => (
                 <p
                   key={paragraph.slice(0, 48)}

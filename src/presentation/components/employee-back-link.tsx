@@ -22,7 +22,7 @@ function OriginBackLink({ company, fallback }: { company: boolean; fallback: Rea
   const dashboardView = target.searchParams.get("dashboardView");
   const year = target.searchParams.get("nomYear");
   const valid = allowedPath && (company || target.searchParams.get("tab") === "dashboard")
-    && ["general", "clinical", "psychosocial2", "psychosocial3", "demographics", "guia4", "referrals"].includes(dashboardView ?? "")
+    && ["general", "clinical", "psychosocial2", "psychosocial3", "demographics", "guia4", "referrals", "reports", "forms"].includes(dashboardView ?? "")
     && (!year || /^(20\d{2}|2100)$/.test(year));
   const employees = !company && allowedPath && target.searchParams.get("tab") === "empleados";
   if (!valid && !employees) return fallback;

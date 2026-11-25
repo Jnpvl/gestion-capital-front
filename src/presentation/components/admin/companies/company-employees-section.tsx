@@ -24,15 +24,12 @@ import {
 import { CreateStudentForm } from "@/presentation/components/admin/students/create-student-form";
 import { AdminPagination } from "@/presentation/components/admin/admin-pagination";
 import { CompanyEmployeesImportModal } from "@/presentation/components/admin/companies/company-employees-import-modal";
-import { EmployeeFormPreviewModal } from "@/presentation/components/admin/companies/employee-form-preview-modal";
-import { EmployeeFormsIcons } from "@/presentation/components/admin/companies/employee-forms-icons";
-import { getCompanyEmployeesFormsSummary, getCompanyFormResults } from "@/infrastructure/http/forms-api";
+import { getCompanyFormResults } from "@/infrastructure/http/forms-api";
 import {
-  getPortalEmployeesFormsSummary,
   getPortalFormResults,
   listPortalEmployees,
 } from "@/infrastructure/http/company-portal-api";
-import type { CompanyDashboardResponse, EmployeeFormState, FormKey } from "@/core/domain/forms/types";
+import type { CompanyDashboardResponse } from "@/core/domain/forms/types";
 import { StudentStatusBadge } from "@/presentation/components/admin/students/student-status-badge";
 
 import { CompanyDashboardDemographicFilters } from "./company-dashboard-demographic-filters";
@@ -40,10 +37,27 @@ import { resolveDemographicAllowedIds } from "@/shared/lib/dashboard-demographic
 
 const PAGE_SIZE = 10;
 
+/** Usa el año de Guía V más reciente disponible para filtros demográficos. */
+async function loadLatestDemographicData(
+  companyId: string,
+  readOnly: boolean,
+): Promise<CompanyDashboardResponse> {
+  const fetchResults = (year?: number) =>
+    readOnly ? getPortalFormResults(year) : getCompanyFormResults(companyId, year);
+
+  const initial = await fetchResults();
+  const years = initial.evaluationYears ?? [];
+  if (years.length === 0) return initial;
+
+  const latest = Math.max(...years);
+  if (latest === initial.evaluationYear) return initial;
+  return fetchResults(latest);
+}
+
 interface CompanyEmployeesSectionProps {
   company: Pick<CompanyDetail, "id" | "name" | "rfc">;
   onEmployeeCreated?: () => void;
-  /** Portal de empresa: solo buscar y ver formularios (sin carga, alta, edición ni links al admin). */
+  /** Portal de empresa: solo buscar y listar (sin carga, alta, edición ni links al admin). */
   readOnly?: boolean;
 }
 
@@ -53,9 +67,6 @@ export function CompanyEmployeesSection({
   readOnly = false,
 }: CompanyEmployeesSectionProps) {
   const companyId = company.id;
-  const currentYear = new Date().getFullYear();
-  const [evaluationYear, setEvaluationYear] = useState(currentYear);
-  const [evaluationYears, setEvaluationYears] = useState<number[]>([]);
   const [demographicData, setDemographicData] = useState<CompanyDashboardResponse | null>(null);
   const [departamento, setDepartamento] = useState("");
   const [puesto, setPuesto] = useState("");
@@ -87,12 +98,6 @@ export function CompanyEmployeesSection({
   const changePuesto = useCallback((value: string) => {
     setPuesto(value); setPage(1); setSelected(new Set()); setAllSelected(false);
   }, []);
-  const [formsByStudent, setFormsByStudent] = useState<Record<string, EmployeeFormState[]>>({});
-  const [preview, setPreview] = useState<{
-    studentId: string;
-    name: string;
-    formKey: FormKey;
-  } | null>(null);
 
   const loadEmployees = useCallback(async () => {
     if (!demographicData) return;
@@ -125,15 +130,6 @@ export function CompanyEmployeesSection({
       }
       if (version !== requestVersion.current) return;
       setEmployees(result.students);
-      const ids = result.students.map((s) => s.id);
-      if (ids.length === 0) {
-        setFormsByStudent({});
-      } else {
-        setFormsByStudent({});
-        const summary = await (readOnly ? getPortalEmployeesFormsSummary(ids, evaluationYear) : getCompanyEmployeesFormsSummary(companyId, ids, evaluationYear));
-        if (version !== requestVersion.current) return;
-        setFormsByStudent(summary.employees);
-      }
       setTotal(result.total);
       setTotalPages(result.totalPages);
     } catch (err) {
@@ -146,21 +142,26 @@ export function CompanyEmployeesSection({
     } finally {
       if (version === requestVersion.current) setIsLoading(false);
     }
-  }, [companyId, debouncedSearch, page, readOnly, evaluationYear, departamento, puesto, demographicData, hasDemographicFilter, refreshVersion]);
+  }, [companyId, debouncedSearch, page, readOnly, departamento, puesto, demographicData, hasDemographicFilter, refreshVersion]);
 
   useEffect(() => {
     let cancelled = false;
-    (readOnly ? getPortalFormResults(evaluationYear) : getCompanyFormResults(companyId, evaluationYear))
-      .then(result => { if (!cancelled) { setDemographicData(result); setEvaluationYears(result.evaluationYears ?? []); } })
+    loadLatestDemographicData(companyId, readOnly)
+      .then(result => { if (!cancelled) setDemographicData(result); })
       .catch(() => {
         if (cancelled) return;
         setDepartamento("");
         setPuesto("");
-        setDemographicData({ evaluationYear, evaluationYears: [], assignedFormKeys: [], employees: [] });
+        setDemographicData({
+          evaluationYear: new Date().getFullYear(),
+          evaluationYears: [],
+          assignedFormKeys: [],
+          employees: [],
+        });
         showError("No se pudieron cargar los filtros de Guía V. Puedes seguir consultando empleados.");
       });
     return () => { cancelled = true; };
-  }, [companyId, readOnly, evaluationYear, refreshVersion]);
+  }, [companyId, readOnly, refreshVersion]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -238,6 +239,7 @@ export function CompanyEmployeesSection({
     }
   }
   const selectionCount = allSelected ? total : selected.size;
+  const latestGuia5Year = demographicData?.evaluationYear;
 
   return (
     <div className="rounded-2xl border border-brand-line bg-white">
@@ -295,7 +297,10 @@ export function CompanyEmployeesSection({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-brand-gray">Buscar y filtrar empleados</h3>
-            <p className="mt-1 text-xs text-brand-muted">El año aplica a los formularios y a los datos de departamento y puesto de la Guía V.</p>
+            <p className="mt-1 text-xs text-brand-muted">
+              Departamento y puesto usan la Guía V más reciente
+              {latestGuia5Year ? ` (${latestGuia5Year})` : ""}.
+            </p>
           </div>
           {(search || hasDemographicFilter) && <button type="button"
             onClick={() => { setSearch(""); setDebouncedSearch(""); changeDepartamento(""); changePuesto(""); }}
@@ -303,54 +308,20 @@ export function CompanyEmployeesSection({
             Limpiar filtros
           </button>}
         </div>
-        <div className="grid items-end gap-3 sm:grid-cols-[180px_minmax(0,1fr)]">
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-brand-muted">Año de evaluación</span>
-          <select
-            aria-label="Año de evaluación"
-            value={evaluationYear}
-            disabled={isLoading}
-            onChange={(event) => {
-              setPreview(null);
-              setDemographicData(null);
-              changeDepartamento("");
-              changePuesto("");
-              setEvaluationYear(Number(event.target.value));
-            }}
-            className="block w-full rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm text-brand-gray"
-          >
-            {Array.from(
-              new Set([
-                ...evaluationYears,
-                evaluationYear,
-                currentYear - 1,
-                currentYear,
-                currentYear + 1,
-              ]),
-            )
-              .sort((a, b) => b - a)
-              .map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-          </select>
-
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-brand-muted">Buscar empleado</span>
-            <input type="search" value={search} onChange={(event) => setSearch(event.target.value)}
-              placeholder="Nombre, correo, CURP o expediente (UUID)"
-              className="w-full rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm outline-none focus:border-brand-blue" />
-          </label>
-        </div>
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-brand-muted">Buscar empleado</span>
+          <input type="search" value={search} onChange={(event) => setSearch(event.target.value)}
+            placeholder="Nombre, correo, CURP o expediente (UUID)"
+            className="w-full rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm outline-none focus:border-brand-blue" />
+        </label>
         {demographicData && <CompanyDashboardDemographicFilters
           embedded demographics={demographicData.demographics} employees={demographicData.employees}
           departamento={departamento} puesto={puesto}
           onDepartamentoChange={changeDepartamento} onPuestoChange={changePuesto}
         />}
         <p role="status" className="text-xs text-brand-muted">
-          {isLoading ? "Buscando empleados…" : `${total} empleado${total === 1 ? "" : "s"}${search || hasDemographicFilter ? " encontrados" : ""}`} · Formularios {evaluationYear}
+          {isLoading ? "Buscando empleados…" : `${total} empleado${total === 1 ? "" : "s"}${search || hasDemographicFilter ? " encontrados" : ""}`}
+          {latestGuia5Year ? ` · Guía V ${latestGuia5Year}` : ""}
         </p>
       </div>
 
@@ -423,9 +394,6 @@ export function CompanyEmployeesSection({
                   <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-brand-muted">
                     Ocupación STPS
                   </th>
-                  <th className="px-4 py-3.5 text-xs font-semibold uppercase tracking-wide text-brand-muted">
-                    Formularios
-                  </th>
                   {!readOnly && (
                     <th className="w-28 px-6 py-3.5 text-center text-xs font-semibold uppercase tracking-wide text-brand-muted">
                       Estado
@@ -481,15 +449,6 @@ export function CompanyEmployeesSection({
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-4 align-middle">
-                      <EmployeeFormsIcons
-                        forms={formsByStudent[employee.id]}
-                        readOnly={readOnly}
-                        onOpen={(formKey) =>
-                          setPreview({ studentId: employee.id, name: employee.name, formKey })
-                        }
-                      />
-                    </td>
                     {!readOnly && (
                       <td className="px-6 py-4 text-center align-middle">
                         <StudentStatusBadge active={employee.active} />
@@ -536,15 +495,6 @@ export function CompanyEmployeesSection({
                         </span>
                       )}
                     </p>
-                    <div className="mt-2">
-                      <EmployeeFormsIcons
-                        forms={formsByStudent[employee.id]}
-                        readOnly={readOnly}
-                        onOpen={(formKey) =>
-                          setPreview({ studentId: employee.id, name: employee.name, formKey })
-                        }
-                      />
-                    </div>
                   </div>
                   {!readOnly && <StudentStatusBadge active={employee.active} />}
                 </div>
@@ -639,18 +589,6 @@ export function CompanyEmployeesSection({
             </div>
           </div>
         </div>
-      )}
-      {preview && (
-        <EmployeeFormPreviewModal
-          companyId={companyId}
-          studentId={preview.studentId}
-          employeeName={preview.name}
-          evaluationYear={evaluationYear}
-          formKey={preview.formKey}
-          readOnly={readOnly}
-          onClose={() => setPreview(null)}
-          onSaved={refreshData}
-        />
       )}
       {!readOnly && (
       <CompanyEmployeesImportModal

@@ -25,10 +25,32 @@ function inUseMessage(n: number) {
   return `No se puede desasignar: ${n} ${n === 1 ? "empleado ya la empezó" : "empleados ya la empezaron"}`;
 }
 
-export function CompanyFormsTab({ companyId }: { companyId: string }) {
+interface CompanyFormsTabProps {
+  companyId: string;
+  /** Año controlado desde NOM-035 (si se omite, el tab maneja el suyo). */
+  evaluationYear?: number;
+  onEvaluationYearChange?: (year: number) => void;
+  /** Oculta el selector interno cuando el año ya está en la barra NOM-035. */
+  hideYearSelect?: boolean;
+  /** Tras asignar/desasignar/cambiar modo, para refrescar el dashboard. */
+  onChanged?: () => void;
+}
+
+export function CompanyFormsTab({
+  companyId,
+  evaluationYear,
+  onEvaluationYearChange,
+  hideYearSelect = false,
+  onChanged,
+}: CompanyFormsTabProps) {
   const { user } = useAuth();
   const currentYear = new Date().getFullYear();
-  const [year, setYear] = useState(currentYear);
+  const [internalYear, setInternalYear] = useState(evaluationYear ?? currentYear);
+  const year = evaluationYear ?? internalYear;
+  const setYear = (next: number) => {
+    if (onEvaluationYearChange) onEvaluationYearChange(next);
+    else setInternalYear(next);
+  };
   const [data, setData] = useState<CompanyFormsResponse | null>(null);
   const [selected, setSelected] = useState<FormKey[]>([]);
   const [dueAt, setDueAt] = useState("");
@@ -37,10 +59,10 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
   const [isSaving, setIsSaving] = useState(false);
   const loadVersion = useRef(0);
 
-  const load = useCallback(async (evaluationYear = year) => {
+  const load = useCallback(async (evaluationYearToLoad = year) => {
     const version = ++loadVersion.current;
     try {
-      const result = await getCompanyForms(companyId, evaluationYear);
+      const result = await getCompanyForms(companyId, evaluationYearToLoad);
       if (version !== loadVersion.current) return null;
       setData(result);
       return result;
@@ -50,6 +72,10 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
       return null;
     }
   }, [companyId, year]);
+
+  useEffect(() => {
+    if (evaluationYear != null) setInternalYear(evaluationYear);
+  }, [evaluationYear]);
 
   useEffect(() => {
     // Ya asignadas aparecen marcadas; si no hay ninguna, se proponen las sugeridas.
@@ -89,6 +115,7 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
       const r = await load(year);
       if (r) setSelected((s) => s.filter((k) => k !== key || r.assignedFormKeys.includes(k)));
       showSuccess(`${label} desasignada (${year})`);
+      onChanged?.();
     } catch (err) {
       showError(err instanceof Error ? err.message : "No se pudo desasignar");
     }
@@ -105,6 +132,7 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
       await setCompanyFormMode(companyId, key, mode, year);
       await load(year);
       showSuccess(`${label}: ${FORM_MODE_LABEL[mode]}`);
+      onChanged?.();
     } catch (err) {
       showError(err instanceof Error ? err.message : "No se pudo cambiar el modo");
     }
@@ -137,6 +165,7 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
       showSuccess(
         `Formularios asignados para ${year}.${sampleNote} Aún no se envían correos a los empleados.`,
       );
+      onChanged?.();
     } catch (err) {
       showError(err instanceof Error ? err.message : "No se pudo asignar");
     } finally {
@@ -166,27 +195,34 @@ export function CompanyFormsTab({ companyId }: { companyId: string }) {
           {suggestionRuleLabel(data.workersCount ?? (data.employeesLinked || null))}
         </p>
 
-        <div className="mt-4">
-          <label className="text-sm font-semibold text-brand-gray" htmlFor="evaluation-year">
-            Año de evaluación
-          </label>
-          <select
-            id="evaluation-year"
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="mt-1.5 block w-full max-w-xs rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm text-brand-gray"
-          >
-            {yearOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1.5 text-xs text-brand-muted">
-            Cada año guarda su propia evaluación. Cambia el año arriba para ver o asignar guías de ese periodo
-            (p. ej. 2026 y 2027 pueden tener la misma Guía II por separado).
+        {!hideYearSelect && (
+          <div className="mt-4">
+            <label className="text-sm font-semibold text-brand-gray" htmlFor="evaluation-year">
+              Año de evaluación
+            </label>
+            <select
+              id="evaluation-year"
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
+              className="mt-1.5 block w-full max-w-xs rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm text-brand-gray"
+            >
+              {yearOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-xs text-brand-muted">
+              Cada año guarda su propia evaluación. Cambia el año arriba para ver o asignar guías de ese periodo
+              (p. ej. 2026 y 2027 pueden tener la misma Guía II por separado).
+            </p>
+          </div>
+        )}
+        {hideYearSelect && (
+          <p className="mt-3 text-xs text-brand-muted">
+            Asignaciones del año <span className="font-semibold text-brand-gray">{year}</span>. Cambia el año en la barra superior para ver otro periodo.
           </p>
-        </div>
+        )}
 
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           {data.forms.map((form) => {
