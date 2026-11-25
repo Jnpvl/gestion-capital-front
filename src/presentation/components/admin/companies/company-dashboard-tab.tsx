@@ -1,10 +1,13 @@
 "use client";
 
 import { CompanyDashboardReferrals } from "./company-dashboard-referrals";
+import { CompanyDashboardReports } from "./company-dashboard-reports";
+import { CompanyFormsTab } from "./company-forms-tab";
 import { DashboardEmployeeLink } from "./dashboard-employee-link";
+import { EmployeeFormPreviewModal } from "./employee-form-preview-modal";
 import { EmployeeRecordNumber } from "./employee-record-number";
 import { useSearchParams } from "next/navigation";
-import { Fragment, Suspense, useEffect, useState } from "react";
+import { Fragment, Suspense, useCallback, useEffect, useState } from "react";
 import { CompanyDashboardDemographicFilters } from "./company-dashboard-demographic-filters";
 import { CompanyDashboardDemographics } from "./company-dashboard-demographics";
 import { CompanyDashboardClinical } from "./company-dashboard-clinical";
@@ -52,10 +55,14 @@ function GuideCell({
   cell,
   isOpen,
   onToggle,
+  onOpen,
+  readOnly,
 }: {
   cell: DashboardFormCell | undefined;
   isOpen: boolean;
   onToggle: () => void;
+  onOpen: () => void;
+  readOnly: boolean;
 }) {
   if (!cell || cell.status === "not_assigned") {
     return <span className="text-brand-muted">No aplica</span>;
@@ -67,40 +74,59 @@ function GuideCell({
       </span>
     );
   }
+  const openLabel = readOnly ? "Ver respuestas" : "Ver o editar respuestas";
   const r = cell.result;
   if (!r) {
     const note = cell.status === "partial" ? "Parcial" : cell.status === "pending" ? "Pendiente" : null;
     return (
-      <span className="text-brand-muted">
+      <button
+        type="button"
+        onClick={onOpen}
+        title={openLabel}
+        className="text-left text-brand-muted hover:text-brand-blue hover:underline"
+      >
         N/A{note && <span className="ml-1 text-xs text-brand-muted/70">· {note}</span>}
-      </span>
+      </button>
     );
   }
   const text =
     r.requiresClinicalAssessment != null
       ? (r.resultText ?? clinicalResultText(r.requiresClinicalAssessment))
       : `${r.levelLabel ?? "—"} (${r.total ?? 0} pts)`;
-  // Guía I: solo el resultado literal, sin detalle desplegable.
+  // Guía I: resultado clínico; clic abre el modal de respuestas.
   if (r.requiresClinicalAssessment != null) {
     return (
-      <span
+      <button
+        type="button"
+        onClick={onOpen}
+        title={openLabel}
         style={clinicalResultColor(r.requiresClinicalAssessment)}
-        className="inline-block rounded-lg px-2.5 py-1 text-xs font-semibold"
+        className="inline-block rounded-lg px-2.5 py-1 text-xs font-semibold hover:opacity-80"
       >
         {text}
-      </span>
+      </button>
     );
   }
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="text-left font-semibold text-brand-gray hover:opacity-80"
-      title="Ver detalle y necesidad de acción"
-    >
-      <span className="mr-1 inline-block w-3 text-brand-muted">{isOpen ? "▾" : "▸"}</span>
-      {r.level ? <LevelPill level={r.level}>{text}</LevelPill> : text}
-    </button>
+    <div className="flex flex-wrap items-center gap-1.5">
+      <button
+        type="button"
+        onClick={onOpen}
+        title={openLabel}
+        className="text-left font-semibold text-brand-gray hover:opacity-80"
+      >
+        {r.level ? <LevelPill level={r.level}>{text}</LevelPill> : text}
+      </button>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="rounded px-1 text-xs text-brand-muted hover:bg-brand-light hover:text-brand-gray"
+        title="Ver detalle y necesidad de acción"
+        aria-expanded={isOpen}
+      >
+        {isOpen ? "▾ detalle" : "▸ detalle"}
+      </button>
+    </div>
   );
 }
 
@@ -127,6 +153,16 @@ function DashboardContent({
   const [departamento, setDepartamento] = useState(DEMOGRAPHIC_FILTER_ALL);
   const [puesto, setPuesto] = useState(DEMOGRAPHIC_FILTER_ALL);
   const [employeeSearch, setEmployeeSearch] = useState("");
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [preview, setPreview] = useState<{
+    studentId: string;
+    name: string;
+    formKey: FormKey;
+  } | null>(null);
+
+  const reloadDashboard = useCallback(() => {
+    setRefreshVersion((value) => value + 1);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -146,33 +182,22 @@ function DashboardContent({
     return () => {
       cancelled = true;
     };
-  }, [companyId, readOnly, year]);
-
-  // Solo años con evaluación real. Si el seleccionado no existe, ir al más reciente.
-  useEffect(() => {
-    if (!data) return;
-    const options = [...new Set((data.evaluationYears ?? []).map(String))].sort(
-      (a, b) => Number(b) - Number(a),
-    );
-    if (options.length > 0 && !options.includes(year)) {
-      setYear(options[0]);
-    }
-  }, [data, year]);
+  }, [companyId, readOnly, year, refreshVersion]);
 
   if (!data) return <div className="text-sm text-brand-muted">Cargando NOM-035...</div>;
 
-  const yearOptions = Array.from(new Set((data.evaluationYears ?? []).map(String))).sort(
-    (a, b) => Number(b) - Number(a),
-  );
+  const currentYearNum = new Date().getFullYear();
+  const yearOptions = Array.from(
+    new Set([
+      ...(data.evaluationYears ?? []).map(String),
+      year,
+      String(currentYearNum - 1),
+      String(currentYearNum),
+      String(currentYearNum + 1),
+    ]),
+  ).sort((a, b) => Number(b) - Number(a));
   const activeYear = yearOptions.includes(year) ? year : (yearOptions[0] ?? year);
-
-  if (yearOptions.length === 0) {
-    return (
-      <div className="rounded-2xl border border-brand-line bg-white p-8 text-sm text-brand-muted">
-        Aún no hay evaluaciones NOM-035. Asigna una guía en la pestaña Formularios para empezar.
-      </div>
-    );
-  }
+  const hasEvaluationYears = (data.evaluationYears ?? []).length > 0;
 
   const assigned = new Set(data.assignedFormKeys ?? []);
   const hasGuia5 =
@@ -189,6 +214,8 @@ function DashboardContent({
     { id: "guia4", label: "Guía IV" },
     hasGuia5 && { id: "demographics", label: "Guía V" },
     { id: "referrals", label: "Canalizaciones" },
+    { id: "reports", label: "Reportes" },
+    !readOnly && { id: "forms", label: "Formularios asignados" },
   ].filter(Boolean) as { id: string; label: string }[];
   const activeView = tabs.some((tab) => tab.id === view) ? view : (tabs[0]?.id ?? "general");
   const guia3Sampling = data.sampling?.nom035_guia3 ?? null;
@@ -205,40 +232,16 @@ function DashboardContent({
         }
       : filteredData;
   const showDemographicFilters =
+    activeView === "general" ||
     activeView === "clinical" ||
     activeView === "psychosocial2" ||
-    activeView === "psychosocial3" || activeView === "demographics" || activeView === "referrals";
+    activeView === "psychosocial3" ||
+    activeView === "demographics" ||
+    activeView === "referrals" ||
+    activeView === "reports";
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6">
-    <div
-      className={`${activeView === "general" || activeView === "guia4" || showDemographicFilters ? "hidden" : "flex"} flex-wrap items-center gap-3 rounded-2xl border border-brand-line bg-white p-1.5 shadow-sm`}
-      role="tablist"
-      aria-label="Año de evaluación NOM-035"
-      hidden={activeView === "general" || activeView === "guia4" || showDemographicFilters}
-    >
-      <span className="shrink-0 px-3 text-xs font-semibold uppercase tracking-wide text-brand-muted">
-        Año
-      </span>
-      <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
-        {yearOptions.map((option) => (
-          <button
-            key={option}
-            type="button"
-            role="tab"
-            aria-selected={activeYear === option}
-            onClick={() => setYear(option)}
-            className={`shrink-0 rounded-xl px-4 py-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue ${
-              activeYear === option
-                ? "bg-brand-gray text-white"
-                : "text-brand-muted hover:bg-brand-light"
-            }`}
-          >
-            {option}
-          </button>
-        ))}
-      </div>
-    </div>
     <div
       className="flex items-center gap-2 rounded-2xl border border-brand-line bg-white p-1.5 shadow-sm"
       role="tablist"
@@ -253,6 +256,19 @@ function DashboardContent({
         document.getElementById(`dashboard-view-${ids[next]}`)?.focus();
       }
     }}>
+      <label className="flex shrink-0 items-center gap-2 border-r border-brand-line px-2 py-1 sm:px-3">
+        <span className="text-xs font-semibold uppercase tracking-wide text-brand-muted">Año</span>
+        <select
+          aria-label="Año de evaluación NOM-035"
+          value={activeYear}
+          onChange={(event) => setYear(event.target.value)}
+          className="rounded-lg border border-brand-line bg-white px-2.5 py-2 text-sm font-semibold text-brand-gray"
+        >
+          {yearOptions.map((option) => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+      </label>
       <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
         {tabs.map((tab) => (
           <button
@@ -285,62 +301,88 @@ function DashboardContent({
         </span>
       )}
     </div>
-    {(activeView === "general" || showDemographicFilters) && (
+    {hasEvaluationYears && showDemographicFilters && (
       <div className="space-y-4 rounded-2xl border border-brand-line bg-white p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-brand-gray">Buscar y filtrar resultados</h3>
-            <p className="mt-1 text-xs text-brand-muted">Departamento y puesto corresponden a la Guía V del año seleccionado.</p>
+            <p className="mt-1 text-xs text-brand-muted">
+              Departamento y puesto corresponden a la Guía V de {activeYear}.
+            </p>
           </div>
           {(employeeSearch || departamento || puesto) && <button type="button"
             onClick={() => { setEmployeeSearch(""); setDepartamento(DEMOGRAPHIC_FILTER_ALL); setPuesto(DEMOGRAPHIC_FILTER_ALL); }}
             className="text-sm font-semibold text-brand-blue hover:underline">Limpiar filtros</button>}
         </div>
-        <div className="grid items-end gap-3 sm:grid-cols-[180px_minmax(0,1fr)]">
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-brand-muted">Año de evaluación</span>
-            <select value={activeYear} onChange={event => setYear(event.target.value)}
-              className="w-full rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm text-brand-gray">
-              {yearOptions.map(option => <option key={option} value={option}>{option}</option>)}
-            </select>
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-brand-muted">Buscar empleado</span>
-            <input type="search" value={employeeSearch} onChange={event => setEmployeeSearch(event.target.value)}
-              placeholder="Nombre o número de expediente"
-              className="w-full rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm outline-none focus:border-brand-blue" />
-          </label>
-        </div>
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-brand-muted">Buscar empleado</span>
+          <input type="search" value={employeeSearch} onChange={event => setEmployeeSearch(event.target.value)}
+            placeholder="Nombre o número de expediente"
+            className="w-full rounded-xl border border-brand-line bg-white px-3 py-2.5 text-sm outline-none focus:border-brand-blue" />
+        </label>
         <CompanyDashboardDemographicFilters embedded demographics={data.demographics} employees={data.employees}
           departamento={departamento} puesto={puesto} onDepartamentoChange={setDepartamento} onPuestoChange={setPuesto} />
-        <p role="status" className="text-xs text-brand-muted">{generalEmployees.length} de {data.employees.length} empleados · Formularios {activeYear}</p>
+        <p role="status" className="text-xs text-brand-muted">{generalEmployees.length} de {data.employees.length} empleados · {activeYear}</p>
       </div>
     )}
-    <div id="dashboard-panel-psychosocial2" role="tabpanel" aria-labelledby="dashboard-view-psychosocial2" hidden={activeView !== "psychosocial2"}>
+    {!hasEvaluationYears && activeView !== "forms" && (
+      <div className="rounded-2xl border border-brand-line bg-white p-8 text-sm text-brand-muted">
+        Aún no hay evaluaciones NOM-035 para este año.
+        {!readOnly && (
+          <>
+            {" "}
+            <button
+              type="button"
+              onClick={() => setView("forms")}
+              className="font-semibold text-brand-blue hover:underline"
+            >
+              Asigna una guía en Formularios asignados
+            </button>
+            {" "}para empezar.
+          </>
+        )}
+      </div>
+    )}
+    <div id="dashboard-panel-forms" role="tabpanel" aria-labelledby="dashboard-view-forms" hidden={activeView !== "forms"}>
+      {!readOnly && activeView === "forms" && (
+        <CompanyFormsTab
+          companyId={companyId}
+          evaluationYear={Number(activeYear)}
+          onEvaluationYearChange={(next) => setYear(String(next))}
+          hideYearSelect
+          onChanged={reloadDashboard}
+        />
+      )}
+    </div>
+    <div id="dashboard-panel-psychosocial2" role="tabpanel" aria-labelledby="dashboard-view-psychosocial2" hidden={!hasEvaluationYears || activeView !== "psychosocial2"}>
       <CompanyDashboardCharts onOpenReferrals={() => setView("referrals")} active={activeView === "psychosocial2"} data={filteredData} guide="nom035_guia2" readOnly={readOnly} returnTo={returnTo} />
     </div>
-    <div id="dashboard-panel-psychosocial3" role="tabpanel" aria-labelledby="dashboard-view-psychosocial3" hidden={activeView !== "psychosocial3"}>
+    <div id="dashboard-panel-psychosocial3" role="tabpanel" aria-labelledby="dashboard-view-psychosocial3" hidden={!hasEvaluationYears || activeView !== "psychosocial3"}>
       <CompanyDashboardCharts onOpenReferrals={() => setView("referrals")} active={activeView === "psychosocial3"} data={guia3ChartData} guide="nom035_guia3" readOnly={readOnly} returnTo={returnTo} />
     </div>
-    <div id="dashboard-panel-clinical" role="tabpanel" aria-labelledby="dashboard-view-clinical" hidden={activeView !== "clinical"}>
+    <div id="dashboard-panel-clinical" role="tabpanel" aria-labelledby="dashboard-view-clinical" hidden={!hasEvaluationYears || activeView !== "clinical"}>
       <CompanyDashboardClinical onOpenReferrals={() => setView("referrals")} data={filteredData} readOnly={readOnly} returnTo={returnTo} />
     </div>
-    <div id="dashboard-panel-guia4" role="tabpanel" aria-labelledby="dashboard-view-guia4" hidden={activeView !== "guia4"}>
+    <div id="dashboard-panel-guia4" role="tabpanel" aria-labelledby="dashboard-view-guia4" hidden={!hasEvaluationYears || activeView !== "guia4"}>
       <CompanyDashboardGuia4 />
     </div>
-    <div id="dashboard-panel-demographics" role="tabpanel" aria-labelledby="dashboard-view-demographics" hidden={activeView !== "demographics"}>
+    <div id="dashboard-panel-demographics" role="tabpanel" aria-labelledby="dashboard-view-demographics" hidden={!hasEvaluationYears || activeView !== "demographics"}>
       <CompanyDashboardDemographics data={filteredData.demographics} employees={filteredData.employees} readOnly={readOnly} returnTo={returnTo} />
     </div>
-    <div id="dashboard-panel-referrals" role="tabpanel" aria-labelledby="dashboard-view-referrals" hidden={activeView !== "referrals"}>
+    <div id="dashboard-panel-reports" role="tabpanel" aria-labelledby="dashboard-view-reports" hidden={!hasEvaluationYears || activeView !== "reports"}>
+      <CompanyDashboardReports key={`${companyId}:${data.evaluationYear}`} data={filteredData} companyId={companyId} readOnly={readOnly} returnTo={returnTo} />
+    </div>
+    <div id="dashboard-panel-referrals" role="tabpanel" aria-labelledby="dashboard-view-referrals" hidden={!hasEvaluationYears || activeView !== "referrals"}>
       <CompanyDashboardReferrals data={filteredData} readOnly={readOnly} returnTo={returnTo} />
     </div>
-    <div id="dashboard-panel-general" role="tabpanel" aria-labelledby="dashboard-view-general" hidden={activeView !== "general"}>
+    <div id="dashboard-panel-general" role="tabpanel" aria-labelledby="dashboard-view-general" hidden={!hasEvaluationYears || activeView !== "general"}>
     <div className="rounded-2xl border border-brand-line bg-white">
       <div className="border-b border-brand-line p-6">
         <h2 className="font-display text-lg font-bold text-brand-gray">Resultados generales</h2>
         <p className="mt-1 text-sm text-brand-muted">
           Vista general por empleado. Solo se muestran las guías asignadas. «N/A»: aún sin resultado.
-          Clic en un resultado de Guía II o III para ver el detalle y la necesidad de acción.
+          Clic en una guía para ver{readOnly ? "" : " o editar"} las respuestas.
+          En Guía II o III usa «detalle» para la necesidad de acción.
         </p>
       </div>
       {generalEmployees.length === 0 ? (
@@ -387,12 +429,35 @@ function DashboardContent({
                               cell={e.forms[g.key]}
                               isOpen={open === id}
                               onToggle={() => setOpen(open === id ? null : id)}
+                              onOpen={() =>
+                                setPreview({
+                                  studentId: e.studentId,
+                                  name: e.employeeName,
+                                  formKey: g.key,
+                                })
+                              }
+                              readOnly={readOnly}
                             />
                           </td>
                         );
                       })}
                       {hasGuia5 && (
-                        <td data-label="Guía V" className="px-6 py-4 text-brand-gray">{g5Label}</td>
+                        <td data-label="Guía V" className="px-6 py-4 text-brand-gray">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPreview({
+                                studentId: e.studentId,
+                                name: e.employeeName,
+                                formKey: "nom035_guia5",
+                              })
+                            }
+                            title={readOnly ? "Ver Guía V" : "Ver o editar Guía V"}
+                            className="text-left font-medium text-brand-gray hover:text-brand-blue hover:underline"
+                          >
+                            {g5Label}
+                          </button>
+                        </td>
                       )}
                     </tr>
                     {detail && (
@@ -442,6 +507,18 @@ function DashboardContent({
       )}
     </div>
     </div>
+    {preview && (
+      <EmployeeFormPreviewModal
+        companyId={companyId}
+        studentId={preview.studentId}
+        employeeName={preview.name}
+        evaluationYear={Number(activeYear)}
+        formKey={preview.formKey}
+        readOnly={readOnly}
+        onClose={() => setPreview(null)}
+        onSaved={reloadDashboard}
+      />
+    )}
     </div>
   );
 }

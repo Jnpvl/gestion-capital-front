@@ -14,14 +14,12 @@ import { CompanyEditForm } from "@/presentation/components/admin/companies/compa
 import { CompanyAccessSection } from "@/presentation/components/admin/companies/company-access-section";
 import { CompanyCoursesTab } from "@/presentation/components/admin/companies/company-courses-tab";
 import { CompanyDashboardTab } from "@/presentation/components/admin/companies/company-dashboard-tab";
-import { CompanyFormsTab } from "@/presentation/components/admin/companies/company-forms-tab";
 import { CompanyEmployeesSection } from "@/presentation/components/admin/companies/company-employees-section";
 
 const TABS = [
   { id: "general", label: "Datos generales" },
   { id: "empleados", label: "Empleados" },
   { id: "cursos", label: "Cursos" },
-  { id: "formularios", label: "Formularios" },
   { id: "dashboard", label: "NOM-035" },
 ] as const;
 
@@ -44,6 +42,16 @@ export function CompanyDetailContent({ companyId }: CompanyDetailContentProps) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const activeTab: TabId = isTabId(tabParam) ? tabParam : "general";
+
+  // Enlaces antiguos ?tab=formularios → NOM-035 / Formularios asignados
+  useEffect(() => {
+    if (tabParam !== "formularios") return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", "dashboard");
+    params.set("dashboardView", "forms");
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [tabParam, searchParams, pathname, router]);
 
   const selectTab = (tab: TabId) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -168,12 +176,6 @@ export function CompanyDetailContent({ companyId }: CompanyDetailContentProps) {
             companyRfc={company.rfc}
             employeesCount={company.studentsCount}
           />
-        </div>
-      )}
-
-      {activeTab === "formularios" && (
-        <div role="tabpanel" id="panel-formularios" aria-labelledby="tab-formularios">
-          <CompanyFormsTab companyId={company.id} />
         </div>
       )}
 
